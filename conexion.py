@@ -1,28 +1,73 @@
+# import serial.tools.list_ports
+
+# def find_available_ports():
+#     """Prints a list of all available serial COM ports."""
+    
+#     ports = serial.tools.list_ports.comports()
+    
+#     if not ports:
+#         print("No COM ports found.")
+#         print("Please make sure your device is plugged in.")
+#         return
+
+#     print("Available COM ports:")
+#     for port, desc, hwid in sorted(ports):
+#         print(f"  {port}: {desc} [{hwid}]")
+
+# if __name__ == '__main__':
+#     find_available_ports()
+
 import serial
 import json
 from pymongo import MongoClient
+from datetime import datetime
 
-# MongoDB connection details
-# client = MongoClient('mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT') # Replace with your MongoDB connection string
-# db = client.arduino_data
-# collection = db.sensor_readings
+#MongoDB connection details
+client = MongoClient('mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT') # Replace with your MongoDB connection string
+db = client.sample_mflix
+collection = db.ismael
 
-# Serial port details
-ser = serial.Serial(port='COM10', baudrate=9600) # Replace 'COM3' with your Arduino's serial port
+try:
+    # Set timeout=1 so readline() doesn't block forever
+    with serial.Serial('COM10', 9600, timeout=1) as ser:
+        
+        print(f"Listening on {ser.name}...")
+        print("Press Ctrl+C to stop.")
 
+        while True:
+            line_bytes = ser.readline()
+            
+            if line_bytes:
+                # Decode and strip
+                line_string = line_bytes.decode('utf-8').rstrip()
+                print(f"Received line: {line_string}")
 
-while True:
-    try:
-        line = ser.readline().decode('utf-8').strip()
-        if line:
-            # Assuming Arduino sends JSON string
-            data = json.loads(line)
-            #collection.insert_one(data)
-            print(f"Data inserted: {data}")
-    except serial.SerialException as e:
-        print(f"Serial error: {e}")
-        break
-    except json.JSONDecodeError as e:   
-        print(f"JSON decode error: {e}, received: {line}")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+                try:
+                    # 1. Parse the JSON string into a Python dict
+                    data_document = json.loads(line_string)
+                    
+                    # 2. Add the timestamp
+                    data_document["timestamp"] = datetime.now()
+                    
+                    # 3. Insert the complete document into MongoDB
+                    result = collection.insert_one(data_document)
+                    print(f"  -> Inserted: {data_document}")
+
+                except json.JSONDecodeError:
+                    print(f"  -> Error: Received bad JSON. Skipping line: {line_string}")
+                except Exception as e:
+                    print(f"  -> Error inserting into MongoDB: {e}")
+
+except serial.SerialException as e:
+    print(f"Serial Error: {e}")
+except KeyboardInterrupt:
+    print("\nProgram stopped.")
+finally:
+    # Make sure to close the MongoDB client connection
+    client.close()
+    print("MongoDB connection closed.")
+
+#informacion enviada linea por linea 
+#estandarizacion de datos
+#la rasp tiene que preguntar por la configuracion 
+#
