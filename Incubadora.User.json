@@ -1,0 +1,84 @@
+[{
+  "_id": {
+    "$oid": "691d1f61f2db85bd5b4bf0d2"
+  },
+  "Name": "Ana",
+  "LastName": "Martinez",
+  "Mail": "amartinez@elpollon.com",
+  "Photo": "url_de_la_foto.jpg",
+  "PhoneNumber": "87168172611",
+  "WorkStation": {
+    "ROL": "Jefe de granja",
+    "Station": "Jefe"
+  }
+},
+{
+  "_id": {
+    "$oid": "691d237897a5f780dd96cdc3"
+  },
+  "Name": "Lucia",
+  "LastName": "Ramirez",
+  "Mail": "lramirez@elpollon.com",
+  "Photo": "url_foto_lucia.jpg",
+  "PhoneNumber": "8716001122",
+  "WorkStation": {
+    "ROL": "Supervisor",
+    "Station": "Área de incubación"
+  }
+},
+{
+  "_id": {
+    "$oid": "691d237897a5f780dd96cdc4"
+  },
+  "Name": "Carlos",
+  "LastName": "Fernandez",
+  "Mail": "cfernandez@elpollon.com",
+  "Photo": "url_foto_carlos.jpg",
+  "PhoneNumber": "8717559988",
+  "WorkStation": {
+    "ROL": "Empleado",
+    "Station": "Área de limpieza"
+  }
+},
+{
+  "_id": {
+    "$oid": "691d237897a5f780dd96cdc5"
+  },
+  "Name": "Mariana",
+  "LastName": "Lopez",
+  "Mail": "mlopez@elpollon.com",
+  "Photo": "url_foto_mariana.jpg",
+  "PhoneNumber": "8717004411",
+  "WorkStation": {
+    "ROL": "Supervisor",
+    "Station": "Control de calidad"
+  }
+},
+{
+  "_id": {
+    "$oid": "691d237897a5f780dd96cdc6"
+  },
+  "Name": "Jorge",
+  "LastName": "Salinas",
+  "Mail": "jsalinas@elpollon.com",
+  "Photo": "url_foto_jorge.jpg",
+  "PhoneNumber": "8716123344",
+  "WorkStation": {
+    "ROL": "Empleado",
+    "Station": "Empaque"
+  }
+},
+{
+  "_id": {
+    "$oid": "691d237897a5f780dd96cdc7"
+  },
+  "Name": "Sofia",
+  "LastName": "Castillo",
+  "Mail": "scastillo@elpollon.com",
+  "Photo": "url_foto_sofia.jpg",
+  "PhoneNumber": "8716985544",
+  "WorkStation": {
+    "ROL": "Empleado",
+    "Station": "Área de incubación"
+  }
+}]
