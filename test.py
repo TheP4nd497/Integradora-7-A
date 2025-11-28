@@ -13,9 +13,9 @@ import sys
 # --- 1. CONFIGURATION (Update these) ---
 SERIAL_PORT = '/dev/ttyUSB0'  # Run 'python -m serial.tools.list_ports' to find this
 BAUD_RATE = 9600              # Must match your Arduino's Serial.begin() rate
-MONGO_CONNECTION_STRING = "mongodb://localhost:27017/"
-MONGO_DB_NAME = "my_sensor_db"
-MONGO_COLLECTION_NAME = "sensor_readings"
+MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
+MONGO_DB_NAME = "Incubadora"
+MONGO_COLLECTION_NAME = "Sensors"
 # --- End of Configuration ---
 
 def main():
@@ -63,28 +63,6 @@ def main():
                     print(f"\nReceived line: {line_string}")
                     
                     # 2. Parse the JSON string into a Python dictionary
-                    try:
-                        data_document = json.loads(line_string)
-                        
-                        # Check if it's a dictionary (valid JSON object)
-                        if not isinstance(data_document, dict):
-                            raise TypeError("JSON was not an object (dict)")
-
-                    except (json.JSONDecodeError, TypeError) as e:
-                        print(f"  -> JSON Error: Skipping line. {e}")
-                        print(f"     Make sure Arduino is sending valid JSON, e.g.:")
-                        print(f"     {{\"sensor\": \"temp\", \"value\": 25.5}}")
-                        continue # Skip to the next line
-
-                    # 3. Add the timestamp
-                    data_document["timestamp"] = datetime.now()
-                    
-                    # 4. Insert the document into MongoDB
-                    try:
-                        result = collection.insert_one(data_document)
-                        print(f"  -> Inserted to MongoDB. Doc: {data_document}")
-                    except Exception as e:
-                        print(f"  -> Mongo Insert Error: {e}")
 
     except serial.SerialException as e:
         print(f"FATAL: Serial Error: {e}")
