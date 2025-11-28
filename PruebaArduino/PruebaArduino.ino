@@ -54,13 +54,13 @@ void loop(){
 
    Serial.print("GAS01:");
   Serial.print(gas);
-  Serial.print(",HUM01:");
+  Serial.print("HUM01:");
   Serial.print(HUMEDAD);
-  Serial.print(",TEM01:");
+  Serial.print("TEM01:");
   Serial.print(TEMPERATURA);
-   Serial.print(",AGU01:");
+   Serial.print("AGU01:");
   Serial.print(agua);
-  Serial.print(",SON01:");
+  Serial.print("SON01:");
   if (valor_son == HIGH){
    Serial.println(1); 
   }else{
