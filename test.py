@@ -9,6 +9,7 @@ import json
 from pymongo import MongoClient, errors
 from datetime import datetime
 import sys
+import certifi
 
 # --- 1. CONFIGURATION (Update these) ---
 SERIAL_PORT = '/dev/ttyUSB0'  # Run 'python -m serial.tools.list_ports' to find this
@@ -26,7 +27,7 @@ def main():
     # --- 2. CONNECT TO MONGODB ---
     try:
         print(f"Connecting to MongoDB at {MONGO_CONNECTION_STRING}...")
-        client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
+        client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
         # Force a connection check
         client.server_info()
         db = client[MONGO_DB_NAME]
