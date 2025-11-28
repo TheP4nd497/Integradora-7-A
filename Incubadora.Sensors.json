@@ -5,74 +5,72 @@
   "Date_Regis": {
     "$date": "2024-01-15T16:30:00.000Z"
   },
-  "GAS": [
-    {
-      "$numberDecimal": "15.1"
-    }
-  ]
+  "sensor_type": "GAS",
+  "value": {
+    "$numberDecimal": "15.1"
+  },
+  "unit": "ppm"
 },
 {
   "_id": {
     "$oid": "691fc2b3c7756419622f2b46"
   },
   "Date_Regis": {
-     "$date":"2024-01-15T16:30:00.000+00:00",
-  }
-  "HUMEDAD": {
-    "Array": [
-      65.5
-    ]
-  }
+    "$date": "2024-01-15T16:30:00.000Z"
+  },
+  "sensor_type": "HUMEDAD",
+  "value": {
+    "$numberDecimal": "65.5"
+  },
+  "unit": "%"
 },
 {
   "_id": {
     "$oid": "691fc2bbc7756419622f2b47"
   },
-  "Date_Regis":{
-     "$date":"2024-01-15T16:30:00.000+00:00",
-  }
-  "TEMP": {
-    "Array": [
-      22.3
-    ]
-  }
+  "Date_Regis": {
+    "$date": "2024-01-15T16:30:00.000Z"
+  },
+  "sensor_type": "TEMP",
+  "value": {
+    "$numberDecimal": "22.3"
+  },
+  "unit": "°C"
 },
 {
   "_id": {
     "$oid": "691fc2c3c7756419622f2b48"
   },
-  "Date_Regis":   {
-     "$date":"2024-01-15T16:30:00.000+00:00",
-  }
-  "SONIDO": {
-    "Array": [
-      45
-    ]
-  }
+  "Date_Regis": {
+    "$date": "2024-01-15T16:30:00.000Z"
+  },
+  "sensor_type": "SONIDO",
+  "value": {
+    "$numberDecimal": "45"
+  },
+  "unit": "dB"
 },
 {
   "_id": {
     "$oid": "691fc2d5c7756419622f2b49"
   },
   "Date_Regis": {
-     "$date":"2024-01-15T16:30:00.000+00:00",
-  }
-  "NIVEL_AGUA": {
-    "Array": [
-      "medio"
-    ]
-  }
+    "$date": "2024-01-15T16:30:00.000Z"
+  },
+  "sensor_type": "NIVEL_AGUA",
+  "value": "medio",
+  "unit": "categoria"
 },
 {
   "_id": {
     "$oid": "691fc2dec7756419622f2b4a"
   },
   "Date_Regis": {
-     "$date":"2024-01-15T16:30:00.000+00:00",
-  }
-  "LUZ": {
-    "Array": [
-      1
-    ]
-  }
+    "$date": "2024-01-15T16:30:00.000Z"
+  },
+  "sensor_type": "LUZ",
+  "value": {
+    "$numberDecimal": "1"
+  },
+  "unit": "estado"
 }]
