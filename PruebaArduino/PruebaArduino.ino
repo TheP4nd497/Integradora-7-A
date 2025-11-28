@@ -52,23 +52,20 @@ void loop(){
   }
   **/
 
-   Serial.print("{\"GAS\":");
+   Serial.print("GAS01:");
   Serial.print(gas);
-  Serial.print(" ,\"HUM\":");
+  Serial.print(",HUM01:");
   Serial.print(HUMEDAD);
-  Serial.print(" ,\"TEM\":");
+  Serial.print(",TEM01:");
   Serial.print(TEMPERATURA);
-   Serial.print(" ,\"agua\":");
+   Serial.print(",AGU01:");
   Serial.print(agua);
-  Serial.print(" ,\"Sonido\":");
+  Serial.print(",SON01:");
   if (valor_son == HIGH){
-   Serial.print(1); 
+   Serial.println(1); 
   }else{
-    Serial.print(0);
+    Serial.println(0);
   }
-  Serial.print(" ,\"Sonido sens\":");
-  Serial.print(sens);
-  Serial.println("}");
 
   delay(1000);
 }
