@@ -12,28 +12,33 @@ class Sensor(Lista):
             self.tipo = tipo
             self.numero = numero
             self.valor = valor
+            self.unit = self.defnir_unidad(tipo)
 
     def __str__(self):
         if self.eslista:
             return super().__str__()
         else:
-            return f"Tipo: {self.tipo} Numero: {self.numero} Valor: {self.valor}"
+            return f"Tipo: {self.tipo} Numero: {self.numero} Valor: {self.valor}, Unidad: {self.unit}"
+        
+    def defnir_unidad(self,tipo):
+        unidades = {
+            "GAS": "PPM",
+            "HUM": "%",
+            "TEM": "°C",
+            "AGU": "PPM",
+            "SON": "cm"
+        }
+        return unidades.get(tipo, "Unknown")
     
     def diccionario(self):
         if self.eslista:
-            lista_dicc = []
-            for sensor in self.list:
-                lista_dicc.append({
-                    "tipo": sensor.tipo,
-                    "numero": sensor.numero,
-                    "valor": sensor.valor
-                })
-            return lista_dicc
+            return [sensor.diccionario() for sensor in self.list]
         else:
             return {
                 "tipo": self.tipo,
                 "numero": self.numero,
-                "valor": self.valor
+                "valor": self.valor,
+                "unit": self.unit
             }
     
     def leer_datos(self, linea):

@@ -3,10 +3,10 @@
 Reads JSON data from a serial port and inserts it into a MongoDB collection.
 Designed to run on a Raspberry Pi (Linux).
 """
-
+from Sensores import Sensor
 import serial
 import json
-from pymongo import MongoClient, errors
+from pymongo import InsertOne, MongoClient, errors
 from datetime import datetime
 import sys
 import certifi
@@ -61,7 +61,14 @@ def main():
                         print(f"  -> Decode Error: Skipping malformed line: {line_bytes}")
                         continue # Skip this loop iteration
 
-                    print(f"\nReceived line: {line_string}")
+                    requesting = []
+
+                    with open(r"sensores.json") as f:
+                        for jsonObj in f:
+                            myDict = json.loads(jsonObj)
+                            requesting.append(InsertOne(myDict))
+
+                    result = collection.bulk_write(requesting)
                     
                     # 2. Parse the JSON string into a Python dictionary
 
