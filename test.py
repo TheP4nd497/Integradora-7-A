@@ -61,14 +61,7 @@ def main():
                         print(f"  -> Decode Error: Skipping malformed line: {line_bytes}")
                         continue # Skip this loop iteration
 
-                    requesting = []
-
-                    with open(r"senso.json") as f:
-                        for jsonObj in f:
-                            myDict = json.loads(jsonObj)
-                            requesting.append(InsertOne(myDict))
-
-                    result = collection.bulk_write(requesting)
+                    print(f"Received line: {line_string}")
                     
                     # 2. Parse the JSON string into a Python dictionary
 
