@@ -55,4 +55,4 @@ if __name__ == "__main__":
     sensores = Sensor()
     sensores.leer_datos(line)
     print(sensores)
-    sensores.jsontransform("sensores.json")
+    sensores.jsontransform("senso.json")

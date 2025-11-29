@@ -63,7 +63,7 @@ def main():
 
                     requesting = []
 
-                    with open(r"sensores.json") as f:
+                    with open(r"senso.json") as f:
                         for jsonObj in f:
                             myDict = json.loads(jsonObj)
                             requesting.append(InsertOne(myDict))

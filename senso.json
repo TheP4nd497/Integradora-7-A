@@ -1,0 +1,32 @@
+[
+    {
+        "tipo": "GAS",
+        "numero": "01",
+        "valor": 346,
+        "unit": "PPM"
+    },
+    {
+        "tipo": "HUM",
+        "numero": "01",
+        "valor": 47,
+        "unit": "%"
+    },
+    {
+        "tipo": "TEM",
+        "numero": "01",
+        "valor": 23,
+        "unit": "\u00b0C"
+    },
+    {
+        "tipo": "AGU",
+        "numero": "01",
+        "valor": 110,
+        "unit": "PPM"
+    },
+    {
+        "tipo": "SON",
+        "numero": "01",
+        "valor": 1,
+        "unit": "cm"
+    }
+]
