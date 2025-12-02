@@ -5,6 +5,7 @@ Raspberry Pi - Arduino - MongoDB
 """
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient, DESCENDING
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ import os
 import hashlib
 
 # --- CONFIGURACIÓN ---
-MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
+MONGO_CONNECTION_STRING = os.getenv("MONGO_CONNECTION_STRING", "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT")
 MONGO_DB_NAME = "Incubadora"
 MONGO_COLLECTION_NAME = "Sensors"
 MONGO_USERS_COLLECTION = "User"
@@ -63,10 +64,9 @@ class UserLogin(BaseModel):
 class SensorReading(BaseModel):
     GAS: Optional[int] = None
     HUM: Optional[int] = None
-    TEM: Optional[int] = None
-    agua: Optional[int] = None
-    Sonido: Optional[int] = None
-    Sonido_sens: Optional[int] = None
+    TEMP: Optional[int] = None
+    AGU: Optional[int] = None
+    SON: Optional[int] = None
     Date_Regis: datetime
 
 class SensorStats(BaseModel):
@@ -267,7 +267,7 @@ async def obtener_datos_sensor_especifico(
     Obtiene datos de un sensor específico
     Sensores disponibles: GAS, HUMEDAD, TEMP, NIVEL_AGUA, SONIDO, LUZ
     """
-    sensores_validos = ["GAS", "HUMEDAD", "TEMP", "NIVEL_AGUA", "SONIDO", "LUZ"]
+    sensores_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
     
     if tipo_sensor not in sensores_validos:
         raise HTTPException(
@@ -278,7 +278,7 @@ async def obtener_datos_sensor_especifico(
     try:
         # Buscar documentos que tengan el sensor_type específico
         lecturas = list(collection.find(
-            {"sensor_type": tipo_sensor}
+            {"Sensor_type": tipo_sensor}
         ).sort("Date_Regis", DESCENDING).limit(limite))
         
         # Extraer los datos del sensor
@@ -309,8 +309,8 @@ async def verificar_alertas():
     UMBRALES = {
         "GAS": {"max": 400, "mensaje": "Nivel de gas peligroso"},
         "TEMP": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
-        "HUMEDAD": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
-        "NIVEL_AGUA": {"max": 800, "mensaje": "Nivel de agua alto"}
+        "HUM": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
+        "AGU": {"max": 800, "mensaje": "Nivel de agua alto"}
     }
     
     try:
@@ -367,19 +367,25 @@ async def verificar_alertas():
 # --- MANEJO DE ERRORES ---
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
-    return {
-        "exito": False,
-        "error": "Recurso no encontrado",
-        "detalle": str(exc.detail) if hasattr(exc, 'detail') else "Not found"
-    }
+    return JSONResponse(
+        status_code=404,
+        content={
+            "exito": False,
+            "error": "Recurso no encontrado",
+            "detalle": str(exc.detail) if hasattr(exc, 'detail') else "Not found"
+        }
+    )
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
-    return {
-        "exito": False,
-        "error": "Error interno del servidor",
-        "detalle": str(exc)
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "exito": False,
+            "error": "Error interno del servidor",
+            "detalle": str(exc)
+        }
+    )
 
 # --- STARTUP/SHUTDOWN ---
 @app.on_event("startup")
