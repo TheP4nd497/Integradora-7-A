@@ -49,7 +49,7 @@ except Exception as e:
     print(f"Error al conectar con MongoDB: {e}")
     raise
 
-# --- MODELOS DE DATOS ---
+# --- MODELOS DE DATOS ------
 class UserRegistro(BaseModel):
     Name: str = Field(..., min_length=2, max_length=100)
     LastName: str = Field(..., min_length=2, max_length=100)
