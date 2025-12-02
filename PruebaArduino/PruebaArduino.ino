@@ -56,7 +56,7 @@ void loop(){
   Serial.print(gas);
   Serial.print("HUM01:");
   Serial.print(HUMEDAD);
-  Serial.print("TEM01:");
+  Serial.print("TEMP01:");
   Serial.print(TEMPERATURA);
    Serial.print("AGU01:");
   Serial.print(agua);

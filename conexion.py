@@ -2,7 +2,7 @@
 
 import serial
 import json
-from pymongo import MongoClient
+from pymongo import InsertOne, MongoClient
 from datetime import datetime
 
 #MongoDB connection details
@@ -11,36 +11,14 @@ db = client.sample_mflix
 collection = db.ismael
 
 try:
-    # Set timeout=1 so readline() doesn't block forever
-    with serial.Serial('COM10', 9600, timeout=1) as ser:
-        
-        print(f"Listening on {ser.name}...")
-        print("Press Ctrl+C to stop.")
+        requesting = []
 
-        while True:
-            line_bytes = ser.readline()
-            
-            if line_bytes:
-                # Decode and strip
-                line_string = line_bytes.decode('utf-8').rstrip()
-                print(f"Received line: {line_string}")
+        with open(r"senso.json") as f:
+            for jsonObj in f:
+                myDict = json.loads(jsonObj)
+                requesting.append(InsertOne(myDict))
 
-                try:
-                    # 1. Parse the JSON string into a Python dict
-                    data_document = json.loads(line_string)
-                    
-                    # 2. Add the timestamp
-                    data_document["timestamp"] = datetime.now()
-                    
-                    # 3. Insert the complete document into MongoDB
-                    result = collection.insert_one(data_document)
-                    print(f"  -> Inserted: {data_document}")
-
-                except json.JSONDecodeError:
-                    print(f"  -> Error: Received bad JSON. Skipping line: {line_string}")
-                except Exception as e:
-                    print(f"  -> Error inserting into MongoDB: {e}")
-
+        result = collection.bulk_write(requesting)
 except serial.SerialException as e:
     print(f"Serial Error: {e}")
 except KeyboardInterrupt:

@@ -33,7 +33,7 @@ class Sensor(Lista):
         unidades = {
             "GAS": "PPM",
             "HUM": "%",
-            "TEM": "°C",
+            "TEMP": "°C",
             "AGU": "PPM",
             "SON": "cm"
         }
@@ -61,7 +61,7 @@ class Sensor(Lista):
     
 
 if __name__ == "__main__":
-    line = "GAS01:346HUM01:47TEM01:23AGU01:110SON01:1"
+    line = "GAS01:346HUM01:47TEMP01:23AGU01:110SON01:1"
     sensores = Sensor()
     sensores.leer_datos(line)
     print(sensores)

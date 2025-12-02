@@ -17,8 +17,20 @@ BAUD_RATE = 9600              # Must match your Arduino's Serial.begin() rate
 MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
 MONGO_DB_NAME = "Incubadora"
 MONGO_COLLECTION_NAME = "Sensors"
-# --- End of Configuration ---
+# --- End of Configuration 
 
+def test_conexion():
+    try:
+        client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
+        client.server_info()
+        print("Connection to MongoDB successful.")
+        client.close()
+        return True
+    except errors.ServerSelectionTimeoutError as err:
+        print(f"Error: Could not connect to MongoDB.")
+        print("Is the 'mongod' service running?")
+        print(err)
+        return False
 def main():
     """
     Main function to connect, read, and insert data.
@@ -60,11 +72,9 @@ def main():
                     except UnicodeDecodeError:
                         print(f"  -> Decode Error: Skipping malformed line: {line_bytes}")
                         continue # Skip this loop iteration
-
-                    print(f"Received line: {line_string}")
-                    
-                    
-
+                    Sensors = Sensor()
+                    Sensors.leer_datos(line_string)
+                    print(Sensors)
 
     except serial.SerialException as e:
         print(f"FATAL: Serial Error: {e}")
@@ -87,4 +97,5 @@ def main():
         print("Exiting.")
 
 if __name__ == "__main__":
+   if test_conexion():
     main()
