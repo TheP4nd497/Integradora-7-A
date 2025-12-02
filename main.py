@@ -64,10 +64,9 @@ class UserLogin(BaseModel):
 class SensorReading(BaseModel):
     GAS: Optional[int] = None
     HUM: Optional[int] = None
-    TEM: Optional[int] = None
-    agua: Optional[int] = None
-    Sonido: Optional[int] = None
-    Sonido_sens: Optional[int] = None
+    TEMP: Optional[int] = None
+    AGU: Optional[int] = None
+    SON: Optional[int] = None
     Date_Regis: datetime
 
 class SensorStats(BaseModel):
@@ -268,7 +267,7 @@ async def obtener_datos_sensor_especifico(
     Obtiene datos de un sensor específico
     Sensores disponibles: GAS, HUMEDAD, TEMP, NIVEL_AGUA, SONIDO, LUZ
     """
-    sensores_validos = ["GAS", "HUMEDAD", "TEMP", "NIVEL_AGUA", "SONIDO", "LUZ"]
+    sensores_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
     
     if tipo_sensor not in sensores_validos:
         raise HTTPException(
@@ -279,7 +278,7 @@ async def obtener_datos_sensor_especifico(
     try:
         # Buscar documentos que tengan el sensor_type específico
         lecturas = list(collection.find(
-            {"sensor_type": tipo_sensor}
+            {"Sensor_type": tipo_sensor}
         ).sort("Date_Regis", DESCENDING).limit(limite))
         
         # Extraer los datos del sensor
@@ -310,8 +309,8 @@ async def verificar_alertas():
     UMBRALES = {
         "GAS": {"max": 400, "mensaje": "Nivel de gas peligroso"},
         "TEMP": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
-        "HUMEDAD": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
-        "NIVEL_AGUA": {"max": 800, "mensaje": "Nivel de agua alto"}
+        "HUM": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
+        "AGU": {"max": 800, "mensaje": "Nivel de agua alto"}
     }
     
     try:
