@@ -74,6 +74,7 @@ def main():
                         continue # Skip this loop iteration
                     Sensors = Sensor()
                     Sensors.leer_datos(line_string)
+                    Sensors.jsontransform("senso.json")
                     print(Sensors)
 
     except serial.SerialException as e:
