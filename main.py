@@ -5,6 +5,7 @@ Raspberry Pi - Arduino - MongoDB
 """
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient, DESCENDING
 from datetime import datetime, timedelta
@@ -15,7 +16,7 @@ import os
 import hashlib
 
 # --- CONFIGURACIÓN ---
-MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
+MONGO_CONNECTION_STRING = os.getenv("MONGO_CONNECTION_STRING", "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT")
 MONGO_DB_NAME = "Incubadora"
 MONGO_COLLECTION_NAME = "Sensors"
 MONGO_USERS_COLLECTION = "User"
@@ -367,19 +368,25 @@ async def verificar_alertas():
 # --- MANEJO DE ERRORES ---
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
-    return {
-        "exito": False,
-        "error": "Recurso no encontrado",
-        "detalle": str(exc.detail) if hasattr(exc, 'detail') else "Not found"
-    }
+    return JSONResponse(
+        status_code=404,
+        content={
+            "exito": False,
+            "error": "Recurso no encontrado",
+            "detalle": str(exc.detail) if hasattr(exc, 'detail') else "Not found"
+        }
+    )
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
-    return {
-        "exito": False,
-        "error": "Error interno del servidor",
-        "detalle": str(exc)
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "exito": False,
+            "error": "Error interno del servidor",
+            "detalle": str(exc)
+        }
+    )
 
 # --- STARTUP/SHUTDOWN ---
 @app.on_event("startup")
