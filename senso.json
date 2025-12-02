@@ -1,32 +1,47 @@
 [
     {
-        "tipo": "GAS",
+        "Date_Regis": {
+            "$date": "2025-12-01 18:58:52"
+        },
+        "Sensor_type": "GAS",
         "numero": "01",
-        "valor": 346,
+        "value": 346,
         "unit": "PPM"
     },
     {
-        "tipo": "HUM",
+        "Date_Regis": {
+            "$date": "2025-12-01 18:58:52"
+        },
+        "Sensor_type": "HUM",
         "numero": "01",
-        "valor": 47,
+        "value": 47,
         "unit": "%"
     },
     {
-        "tipo": "TEM",
+        "Date_Regis": {
+            "$date": "2025-12-01 18:58:52"
+        },
+        "Sensor_type": "TEM",
         "numero": "01",
-        "valor": 23,
+        "value": 23,
         "unit": "\u00b0C"
     },
     {
-        "tipo": "AGU",
+        "Date_Regis": {
+            "$date": "2025-12-01 18:58:52"
+        },
+        "Sensor_type": "AGU",
         "numero": "01",
-        "valor": 110,
+        "value": 110,
         "unit": "PPM"
     },
     {
-        "tipo": "SON",
+        "Date_Regis": {
+            "$date": "2025-12-01 18:58:52"
+        },
+        "Sensor_type": "SON",
         "numero": "01",
-        "valor": 1,
+        "value": 1,
         "unit": "cm"
     }
 ]

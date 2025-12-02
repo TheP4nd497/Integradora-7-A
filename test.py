@@ -64,6 +64,8 @@ def main():
                     print(f"Received line: {line_string}")
                     
                     # 2. Parse the JSON string into a Python dictionary
+                    
+
 
     except serial.SerialException as e:
         print(f"FATAL: Serial Error: {e}")

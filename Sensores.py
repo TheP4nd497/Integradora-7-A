@@ -1,6 +1,8 @@
 
 import re
 from lista import Lista
+import json
+from datetime import datetime
 
 class Sensor(Lista):
     def __init__(self,tipo=None,numero=None,valor=None):
@@ -13,12 +15,19 @@ class Sensor(Lista):
             self.numero = numero
             self.valor = valor
             self.unit = self.defnir_unidad(tipo)
+    
+    def __iter__(self):
+        if self.eslista:
+            for sensor in self.list:
+                yield sensor
+        else:
+            yield self
 
     def __str__(self):
         if self.eslista:
             return super().__str__()
         else:
-            return f"Tipo: {self.tipo} Numero: {self.numero} Valor: {self.valor}, Unidad: {self.unit}"
+            return f"Tipo: {self.tipo} Numero: {self.numero} Valor: {self.valor} Unidad: {self.unit}"
         
     def defnir_unidad(self,tipo):
         unidades = {
@@ -35,9 +44,10 @@ class Sensor(Lista):
             return [sensor.diccionario() for sensor in self.list]
         else:
             return {
-                "tipo": self.tipo,
+                "Date_Regis": {"$date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                "Sensor_type": self.tipo,
                 "numero": self.numero,
-                "valor": self.valor,
+                "value": self.valor,
                 "unit": self.unit
             }
     
