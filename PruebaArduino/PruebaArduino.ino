@@ -9,8 +9,8 @@
 #define LDRPIN 5      //sensor de luz
 #define agua_pin A5       // SENSOR DE AGUA 
 int dhtsens = 7;			// pin DATA de DHT22 a pin digital 2
-int servo1_pin = 4
-int servo2_pin = 8
+int servo1_pin = 4;
+int servo2_pin = 8;
 int TEMPERATURA;
 int HUMEDAD;
 int gas;
