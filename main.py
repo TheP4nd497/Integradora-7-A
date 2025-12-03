@@ -64,7 +64,7 @@ class UserLogin(BaseModel):
 class SensorReading(BaseModel):
     GAS: Optional[int] = None
     HUM: Optional[int] = None
-    TEMP: Optional[int] = None
+    TEM: Optional[int] = None
     AGU: Optional[int] = None
     SON: Optional[int] = None
     Date_Regis: datetime
@@ -194,7 +194,7 @@ async def health_check():
 
 @app.get("/lecturas/ultima")
 async def obtener_ultima_lectura():
-    """Obtiene la última lectura registrada (datos sin normalizar)"""
+    """Obtiene la última lectura registrada"""
     try:
         lectura = collection.find().sort("Date_Regis", DESCENDING).limit(1)
         
@@ -265,9 +265,9 @@ async def obtener_datos_sensor_especifico(
 ):
     """
     Obtiene datos de un sensor específico
-    Sensores disponibles: GAS, HUMEDAD, TEMP, NIVEL_AGUA, SONIDO, LUZ
+    Sensores disponibles: GAS, HUMEDAD, TEM, NIVEL_AGUA, SONIDO, LUZ
     """
-    sensores_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
+    sensores_validos = ["GAS", "HUM", "TEM", "AGU", "SON", "LUZ"]
     
     if tipo_sensor not in sensores_validos:
         raise HTTPException(
@@ -308,7 +308,7 @@ async def verificar_alertas():
     """
     UMBRALES = {
         "GAS": {"max": 400, "mensaje": "Nivel de gas peligroso"},
-        "TEMP": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
+        "TEM": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
         "HUM": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
         "AGU": {"max": 800, "mensaje": "Nivel de agua alto"}
     }
