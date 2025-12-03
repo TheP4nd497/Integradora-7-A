@@ -8,6 +8,7 @@ import sys
 import certifi
 import http.client as httplib
 import threading
+import time
 
 # --- 1. CONFIGURATION (Update these) ---
 SERIAL_PORT = '/dev/ttyUSB0'  # Run 'python -m serial.tools.list_ports' to find this
@@ -47,6 +48,7 @@ class Conexxion():
         # 2. DO THE WORK
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             line_bytes = ser.readline()
+            time.sleep(5) 
             if line_bytes:
                 # 1. Decode bytes into a string and strip whitespace
                 line = line_bytes.decode('utf-8').strip()
