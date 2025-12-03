@@ -47,18 +47,19 @@ class Conexxion():
         sensores = Sensor()
         # 2. DO THE WORK
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
-            line_bytes = ser.readline()
-            time.sleep(5) 
-            if line_bytes:
-                # 1. Decode bytes into a string and strip whitespace
-                line = line_bytes.decode('utf-8').strip()
-                print(f"Received line: {line}")
+            while True:
+                line_bytes = ser.readline()
+                if line_bytes:
+                    # 1. Decode bytes into a string and strip whitespace
+                    line = line_bytes.decode('utf-8').strip()
+                    print(f"Received line: {line}")
 
-                # 2. Parse the line into Sensor objects
-                
-                sensores.leer_datos(line)
-                sensores.jsontransform("senso.json")
-                print(sensores)
+                    # 2. Parse the line into Sensor objects
+                    
+                    sensores.leer_datos(line)
+                    sensores.jsontransform("senso.json")
+                    print(sensores)
+                    break  # Exit after processing one line for this example
        
 
         if self.checkInternetHttplib():
