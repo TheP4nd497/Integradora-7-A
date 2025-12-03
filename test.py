@@ -69,13 +69,14 @@ def main():
                 # 1. Decode bytes into a string and strip whitespace
                 try:
                     line_string = line_bytes.decode('utf-8').rstrip()
+                    Sensors = Sensor()
+                    Sensors.leer_datos(line_string)
+                    Sensors.jsontransform("senso.json")
+                    print(Sensors)
+
                 except UnicodeDecodeError:
                     print(f"  -> Decode Error: Skipping malformed line: {line_bytes}") # Skip this loop iteration
-                Sensors = Sensor()
-                Sensors.leer_datos(line_string)
-                Sensors.jsontransform("senso.json")
-                print(Sensors)
-
+               
     except serial.SerialException as e:
         print(f"FATAL: Serial Error: {e}")
         if "Permission denied" in str(e):
