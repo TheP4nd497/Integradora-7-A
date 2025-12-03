@@ -61,21 +61,20 @@ def main():
             print(f"Successfully opened port. Listening on {ser.name}")
             print("Press Ctrl+C to stop.")
             
-            while True:
+    
                 # Read one line of bytes
-                line_bytes = ser.readline()
+            line_bytes = ser.readline()
                 
-                if line_bytes:
-                    # 1. Decode bytes into a string and strip whitespace
-                    try:
-                        line_string = line_bytes.decode('utf-8').rstrip()
-                    except UnicodeDecodeError:
-                        print(f"  -> Decode Error: Skipping malformed line: {line_bytes}")
-                        continue # Skip this loop iteration
-                    Sensors = Sensor()
-                    Sensors.leer_datos(line_string)
-                    Sensors.jsontransform("senso.json")
-                    print(Sensors)
+            if line_bytes:
+                # 1. Decode bytes into a string and strip whitespace
+                try:
+                    line_string = line_bytes.decode('utf-8').rstrip()
+                except UnicodeDecodeError:
+                    print(f"  -> Decode Error: Skipping malformed line: {line_bytes}") # Skip this loop iteration
+                Sensors = Sensor()
+                Sensors.leer_datos(line_string)
+                Sensors.jsontransform("senso.json")
+                print(Sensors)
 
     except serial.SerialException as e:
         print(f"FATAL: Serial Error: {e}")
