@@ -1,7 +1,7 @@
 [
     {
         "Date_Regis": {
-            "$date": "2025-12-01 18:58:52"
+            "$date": "2025-12-02 17:02:26"
         },
         "Sensor_type": "GAS",
         "numero": "01",
@@ -10,7 +10,7 @@
     },
     {
         "Date_Regis": {
-            "$date": "2025-12-01 18:58:52"
+            "$date": "2025-12-02 17:02:26"
         },
         "Sensor_type": "HUM",
         "numero": "01",
@@ -19,16 +19,16 @@
     },
     {
         "Date_Regis": {
-            "$date": "2025-12-01 18:58:52"
+            "$date": "2025-12-02 17:02:26"
         },
-        "Sensor_type": "TEM",
+        "Sensor_type": "TEMP",
         "numero": "01",
         "value": 23,
         "unit": "\u00b0C"
     },
     {
         "Date_Regis": {
-            "$date": "2025-12-01 18:58:52"
+            "$date": "2025-12-02 17:02:26"
         },
         "Sensor_type": "AGU",
         "numero": "01",
@@ -37,7 +37,7 @@
     },
     {
         "Date_Regis": {
-            "$date": "2025-12-01 18:58:52"
+            "$date": "2025-12-02 17:02:26"
         },
         "Sensor_type": "SON",
         "numero": "01",
