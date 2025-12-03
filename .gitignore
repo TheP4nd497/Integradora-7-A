@@ -1,1 +1,17 @@
 __pycache__/Sensores.cpython-313.pyc
+# Archivos de Python
+__pycache__/
+*.pyc
+
+# Entornos virtuales
+venv/
+env/
+
+# Variables de entorno
+.env
+.env.local
+
+# Archivos de caché adicionales
+*.pyo
+*.pyd
+*.pdb
