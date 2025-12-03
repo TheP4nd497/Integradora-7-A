@@ -1,5 +1,5 @@
 
-
+#include <Servo.h>
 #include <DHT.h>		// importa la Librerias DHT
 #include <DHT_U.h>
 
@@ -9,12 +9,22 @@
 #define LDRPIN 5      //sensor de luz
 #define agua_pin A5       // SENSOR DE AGUA 
 int dhtsens = 7;			// pin DATA de DHT22 a pin digital 2
+int servo1_pin = 4
+int servo2_pin = 8
 int TEMPERATURA;
 int HUMEDAD;
 int gas;
 int agua;
 int valor_son;
 int sens ;
+Servo servo1;
+Servo servo2;
+// Variables to track time
+unsigned long previousMillis = 0;
+const long interval = 10000; // 10 seconds in milliseconds
+
+// Variable to track servo state (true = 90deg, false = 0deg)
+bool isAtNinety = false;
 
 
 DHT dht(dhtsens, DHT11);		// creacion del objeto, cambiar segundo parametro
@@ -22,9 +32,34 @@ DHT dht(dhtsens, DHT11);		// creacion del objeto, cambiar segundo parametro
 void setup(){
   Serial.begin(9600);		// inicializacion de monitor serial
   dht.begin();			// inicializacion de sensor
+
+  servo1.attach(servo1_pin);
+  servo2.attach(servo2_pin);
+  
+  // Start at 0
+  servo1.write(0);
+  servo2.write(90);
 }
 
 void loop(){
+
+  // Check if 10 seconds have passed
+  if (currentMillis - previousMillis >= interval) {
+    // Save the last time we moved
+    previousMillis = currentMillis;
+
+    if (isAtNinety) {
+      // If currently at 90, go to 0
+      servo1.write(90);
+      servo2.write(0);
+      isAtNinety = false;
+    } else {
+      // If currently at 0, go to 90
+      servo1.write(0);
+      servo2.write(90);
+      isAtNinety = true;
+    }
+  }
 
   //AGUA
   agua = analogRead(agua_pin);
