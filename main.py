@@ -64,7 +64,7 @@ class UserLogin(BaseModel):
 class SensorReading(BaseModel):
     GAS: Optional[int] = None
     HUM: Optional[int] = None
-    TEM: Optional[int] = None
+    TEMP: Optional[int] = None
     AGU: Optional[int] = None
     SON: Optional[int] = None
     Date_Regis: datetime
@@ -267,7 +267,7 @@ async def obtener_datos_sensor_especifico(
     Obtiene datos de un sensor específico
     Sensores disponibles: GAS, HUMEDAD, TEM, NIVEL_AGUA, SONIDO, LUZ
     """
-    sensores_validos = ["GAS", "HUM", "TEM", "AGU", "SON", "LUZ"]
+    sensores_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
     
     if tipo_sensor not in sensores_validos:
         raise HTTPException(
