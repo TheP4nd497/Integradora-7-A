@@ -43,7 +43,7 @@ class Conexxion():
         # 1. Check if we should still be running
         if not self.is_running:
             return  # Stop the loop
-
+        sensores = Sensor()
         # 2. DO THE WORK
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             line_bytes = ser.readline()
@@ -53,29 +53,29 @@ class Conexxion():
                 print(f"Received line: {line}")
 
                 # 2. Parse the line into Sensor objects
-                sensores = Sensor()
+                
                 sensores.leer_datos(line)
                 sensores.jsontransform("senso.json")
                 print(sensores)
        
 
-            if self.checkInternetHttplib():
-                try:
-                    client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
-                    database = client.get_database(MONGO_DB_NAME)
-                    collec = database.get_collection(MONGO_COLLECTION_NAME)
-                    documentos = sensores.diccionario()
-                    collec.insert_many(documentos)
-                    client.close()
+        if self.checkInternetHttplib():
+            try:
+                client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
+                database = client.get_database(MONGO_DB_NAME)
+                collec = database.get_collection(MONGO_COLLECTION_NAME)
+                documentos = sensores.diccionario()
+                collec.insert_many(documentos)
+                client.close()
 
-                except Exception as e:
-                        raise Exception("Unable to find the document due to the following error: ", e)
-            else:
-                print("no inter")
+            except Exception as e:
+                    raise Exception("Unable to find the document due to the following error: ", e)
+        else:
+            print("no inter")
 
-            # 3. Create the *next* timer to run this method again
-            self.timer = threading.Timer(self.interval, self._run_task)
-            self.timer.start()
+        # 3. Create the *next* timer to run this method again
+        self.timer = threading.Timer(self.interval, self._run_task)
+        self.timer.start()
 
  def start(self):
         if self.is_running:
