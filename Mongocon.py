@@ -72,10 +72,14 @@ class Conexxion():
                 client.close()
 
             except Exception as e:
-                    raise Exception("Unable to find the document due to the following error: ", e)
+            # Just print the error, do NOT raise it.
+            # This allows the timer at the bottom to restart the task.
+                print(f"⚠️  Database Error: {e}")
+                print("Retrying in next cycle...")
         else:
             print("no inter")
 
+        
         # 3. Create the *next* timer to run this method again
         self.timer = threading.Timer(self.interval, self._run_task)
         self.timer.start()
