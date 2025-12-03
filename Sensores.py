@@ -66,3 +66,4 @@ if __name__ == "__main__":
     sensores.leer_datos(line)
     print(sensores)
     sensores.jsontransform("senso.json")
+    print(sensores.diccionario())

@@ -1,16 +1,27 @@
 
-from pymongo import MongoClient,InsertOne
-from Sensores import sensores
-# importing required module
-import threading
-import time
+from Sensores import Sensor
+import serial
+import json
+from pymongo import InsertOne, MongoClient, errors
+from datetime import datetime
+import sys
+import certifi
 import http.client as httplib
+import threading
+
+# --- 1. CONFIGURATION (Update these) ---
+SERIAL_PORT = '/dev/ttyUSB0'  # Run 'python -m serial.tools.list_ports' to find this
+BAUD_RATE = 9600              # Must match your Arduino's Serial.begin() rate
+MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
+MONGO_DB_NAME = "Incubadora"
+MONGO_COLLECTION_NAME = "Sensors"
+# --- End of Configuration 
 
 
 class Conexxion():
     
 
- def __init__(self, interval_seconds):
+ def __init__(self, interval_seconds = 5):
     self.interval = interval_seconds
     self.is_running = False
     self.timer = None
@@ -34,14 +45,27 @@ class Conexxion():
             return  # Stop the loop
 
         # 2. DO THE WORK
+        with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
+            line_bytes = ser.readline()
+            if line_bytes:
+                # 1. Decode bytes into a string and strip whitespace
+                line = line_bytes.decode('utf-8').strip()
+                print(f"Received line: {line}")
+
+                # 2. Parse the line into Sensor objects
+                sensores = Sensor()
+                sensores.leer_datos(line)
+                sensores.jsontransform("senso.json")
+                print(sensores)
        
 
         if self.checkInternetHttplib():
             try:
-                uri = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
-                client = MongoClient(uri)
-                database = client.get_database("sample_mflix")
-                collec = database.get_collection("Ismael")
+                client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
+                database = client.get_database(MONGO_DB_NAME)
+                collec = database.get_collection(MONGO_COLLECTION_NAME)
+                documentos = sensores.diccionario()
+                collec.insert_many(documentos)
                 client.close()
 
             except Exception as e:
@@ -73,3 +97,11 @@ class Conexxion():
             self.timer.cancel()
         print("Task stopped.")
 # function to check internet connectivity
+if __name__ == "__main__":
+    conexion = Conexxion(interval_seconds=10)  # Check every 10 seconds
+    try:
+        conexion.start()
+        while True:
+            pass  # Keep the main thread alive
+    except KeyboardInterrupt:
+        conexion.stop()
