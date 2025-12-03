@@ -1,8 +1,5 @@
-
-"""
-FastAPI REST API para sistema de monitoreo de sensores
-Raspberry Pi - Arduino - MongoDB
-"""
+"""FastAPI REST API para sistema de monitoreo de sensores
+Raspberry Pi - Arduino - MongoDB"""
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -14,12 +11,16 @@ from pydantic import BaseModel, EmailStr, Field
 from bson import Decimal128
 import os
 import hashlib
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # --- CONFIGURACIÓN ---
-MONGO_CONNECTION_STRING = os.getenv("MONGO_CONNECTION_STRING", "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT")
-MONGO_DB_NAME = "Incubadora"
-MONGO_COLLECTION_NAME = "Sensors"
-MONGO_USERS_COLLECTION = "User"
+MONGO_CONNECTION_STRING = os.getenv("MONGO_CONNECTION_STRING")
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "Incubadora")
+MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME", "Sensors")
+MONGO_USERS_COLLECTION = os.getenv("MONGO_USERS_COLLECTION", "User")
 
 # Inicializar FastAPI
 app = FastAPI(
@@ -31,7 +32,7 @@ app = FastAPI(
 # Configurar CORS para permitir peticiones desde iOS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especifica tu dominio
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,7 +56,7 @@ class UserRegistro(BaseModel):
     LastName: str = Field(..., min_length=2, max_length=100)
     Mail: EmailStr
     Contraseña: str = Field(..., min_length=6)
-    PhoneNumber: Optional[str] = None
+    PhoneNumber: Optional[str] = Field(None, pattern=r'^\+?[0-9]{10,15}$')
 
 class UserLogin(BaseModel):
     Mail: EmailStr
@@ -194,19 +195,37 @@ async def health_check():
 
 @app.get("/lecturas/ultima")
 async def obtener_ultima_lectura():
-    """Obtiene la última lectura registrada"""
+    """Obtiene la última lectura de CADA tipo de sensor"""
     try:
-        lectura = collection.find().sort("Date_Regis", DESCENDING).limit(1)
+        sensores = ["GAS", "HUM", "TEMP", "AGU", "SON"]
+        lecturas_por_sensor = {}
         
-        lecturas_list = list(lectura)
-        if not lecturas_list or len(lecturas_list) == 0:
-            return {"exito": False, "mensaje": "No hay lecturas registradas"}
-
-        lectura_doc = limpiar_documento(lecturas_list[0])
-
+        for sensor in sensores:
+            # Buscar la última lectura de este sensor específico
+            lectura = collection.find_one(
+                {"Sensor_type": sensor},
+                sort=[("Date_Regis", DESCENDING)]
+            )
+            
+            if lectura:
+                lecturas_por_sensor[sensor] = {
+                    "_id": str(lectura.get("_id")),
+                    "value": convertir_decimal128(lectura.get("value")),
+                    "unit": lectura.get("unit"),
+                    "Sensor_type": lectura.get("Sensor_type"),
+                    "Date_Regis": lectura.get("Date_Regis")
+                }
+        
+        if not lecturas_por_sensor:
+            return {
+                "exito": False, 
+                "mensaje": "No hay lecturas registradas"
+            }
+        
         return {
             "exito": True,
-            "ultima_lectura": lectura_doc
+            "total_sensores": len(lecturas_por_sensor),
+            "lecturas": lecturas_por_sensor
         }
 
     except Exception as e:
@@ -288,7 +307,7 @@ async def obtener_datos_sensor_especifico(
                 "_id": str(lectura.get("_id")),
                 "value": convertir_decimal128(lectura.get("value")),
                 "unit": lectura.get("unit"),
-                "sensor_type": lectura.get("sensor_type"),
+                "Sensor_type": lectura.get("Sensor_type"),
                 "Date_Regis": lectura.get("Date_Regis")
             })
         
@@ -320,7 +339,7 @@ async def verificar_alertas():
         for sensor_type, limites in UMBRALES.items():
             # Obtener la última lectura de este sensor
             lectura = collection.find(
-                {"sensor_type": sensor_type}
+                {"Sensor_type": sensor_type}
             ).sort("Date_Regis", DESCENDING).limit(1)
             
             lecturas_list = list(lectura)
@@ -393,6 +412,7 @@ async def startup_event():
     print("🚀 API iniciada correctamente")
     print(f"Base de datos: {MONGO_DB_NAME}")
     print(f"Colección: {MONGO_COLLECTION_NAME}")
+    print(f"Usuarios Colección: {MONGO_USERS_COLLECTION}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -403,7 +423,7 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",  # Accesible desde cualquier IP
-        port=8000,
-        reload=True  # Auto-reload durante desarrollo
+        host=os.getenv("API_HOST", "0.0.0.0"),
+        port=int(os.getenv("API_PORT", 8000)),
+        reload=True
     )

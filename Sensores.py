@@ -44,7 +44,7 @@ class Sensor(Lista):
             return [sensor.diccionario() for sensor in self.list]
         else:
             return {
-                "Date_Regis": {"$date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                "Date_Regis": datetime.now(),
                 "Sensor_type": self.tipo,
                 "numero": self.numero,
                 "value": self.valor,
@@ -66,3 +66,4 @@ if __name__ == "__main__":
     sensores.leer_datos(line)
     print(sensores)
     sensores.jsontransform("senso.json")
+    print(sensores.diccionario())
