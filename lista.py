@@ -2,7 +2,6 @@
 import json
 from os import getcwd, path
 from bson import json_util
-import bson
 
 
 class Lista:
@@ -40,5 +39,5 @@ class Lista:
     def jsontransform(self, filename="data.json"):
         route = getcwd()
         with open(path.join(route, filename), "w") as archivo:
-            bson.json_util.dump(self.diccionario(), archivo, indent=4)
+           archivo.write(json_util.dumps(self.diccionario(), indent=4))
     
