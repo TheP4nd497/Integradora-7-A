@@ -42,7 +42,7 @@ void setup(){
 }
 
 void loop(){
-
+  unsigned long currentMillis = millis();
   // Check if 10 seconds have passed
   if (currentMillis - previousMillis >= interval) {
     // Save the last time we moved
