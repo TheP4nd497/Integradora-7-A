@@ -59,23 +59,23 @@ class Conexxion():
                 print(sensores)
        
 
-        if self.checkInternetHttplib():
-            try:
-                client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
-                database = client.get_database(MONGO_DB_NAME)
-                collec = database.get_collection(MONGO_COLLECTION_NAME)
-                documentos = sensores.diccionario()
-                collec.insert_many(documentos)
-                client.close()
+            if self.checkInternetHttplib():
+                try:
+                    client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
+                    database = client.get_database(MONGO_DB_NAME)
+                    collec = database.get_collection(MONGO_COLLECTION_NAME)
+                    documentos = sensores.diccionario()
+                    collec.insert_many(documentos)
+                    client.close()
 
-            except Exception as e:
-                    raise Exception("Unable to find the document due to the following error: ", e)
-        else:
-            print("no inter")
+                except Exception as e:
+                        raise Exception("Unable to find the document due to the following error: ", e)
+            else:
+                print("no inter")
 
-        # 3. Create the *next* timer to run this method again
-        self.timer = threading.Timer(self.interval, self._run_task)
-        self.timer.start()
+            # 3. Create the *next* timer to run this method again
+            self.timer = threading.Timer(self.interval, self._run_task)
+            self.timer.start()
 
  def start(self):
         if self.is_running:
