@@ -15,3 +15,4 @@ env/
 *.pyo
 *.pyd
 *.pdb
+*.yml
