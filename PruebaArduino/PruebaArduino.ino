@@ -89,8 +89,8 @@ void loop(){
   Serial.print(TEMPERATURA);
    Serial.print("AGU01:");
   Serial.print(agua);
-  Serial.print("LUZ01:")
-  Serial.print(luz)
+  Serial.print("LUZ01:");
+  Serial.print(luz);
   Serial.print("SON01:");
   if (valor_son == HIGH){
    Serial.println(1); 
