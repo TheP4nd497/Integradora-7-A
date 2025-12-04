@@ -44,7 +44,7 @@ void setup(){
 void loop(){
   unsigned long currentMillis = millis();
   // Check if 10 seconds have passed
-  if (currentMillis - previousMillis >= interval) {
+  if (currentMillis - previousMillis >= interval) { 
     // Save the last time we moved
     previousMillis = currentMillis;
 
@@ -78,14 +78,8 @@ void loop(){
   
 
   //luz
- /** int32_t luz = digitalRead(LDRPIN);
-    Serial.print(" ");
-  if(luz == 1 ){
-    Serial.println("Foco Apagado ");
-  }else{
-    Serial.println("Foco Encendido ");
-  }
-  **/
+ int32_t luz = digitalRead(LDRPIN)
+  
 
    Serial.print("GAS01:");
   Serial.print(gas);
@@ -95,12 +89,15 @@ void loop(){
   Serial.print(TEMPERATURA);
    Serial.print("AGU01:");
   Serial.print(agua);
+  Serial.print("LUZ01:")
+  Serial.print(luz)
   Serial.print("SON01:");
   if (valor_son == HIGH){
    Serial.println(1); 
   }else{
     Serial.println(0);
   }
+  
 
   delay(1000);
 }
