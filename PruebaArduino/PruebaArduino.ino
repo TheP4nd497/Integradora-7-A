@@ -78,7 +78,7 @@ void loop(){
   
 
   //luz
- int32_t luz = digitalRead(LDRPIN)
+ int32_t luz = digitalRead(LDRPIN);
   
 
    Serial.print("GAS01:");
