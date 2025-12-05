@@ -68,6 +68,7 @@ class SensorReading(BaseModel):
     TEMP: Optional[int] = None
     AGU: Optional[int] = None
     SON: Optional[int] = None
+    LUZ: Optional[int] = None
     Date_Regis: datetime
 
 class SensorStats(BaseModel):
@@ -197,7 +198,7 @@ async def health_check():
 async def obtener_ultima_lectura():
     """Obtiene la última lectura de CADA tipo de sensor"""
     try:
-        sensores = ["GAS", "HUM", "TEMP", "AGU", "SON"]
+        sensores = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
         lecturas_por_sensor = {}
         
         for sensor in sensores:
@@ -329,7 +330,8 @@ async def verificar_alertas():
         "GAS": {"max": 400, "mensaje": "Nivel de gas peligroso"},
         "TEM": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
         "HUM": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
-        "AGU": {"max": 800, "mensaje": "Nivel de agua alto"}
+        "AGU": {"max": 800, "mensaje": "Nivel de agua alto"},
+        "LUZ": {"min": 100, "mensaje": "Nivel de luz bajo"}
     }
     
     try:
