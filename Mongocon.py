@@ -90,8 +90,8 @@ class Conexxion():
                 if results:
                     incub_data = results[0]  # Get the first (and only) match
                     
-                  
-                    documentos = sensores.diccionario(IncubadoraWrapper(incub_data))
+                    mi_icubadora = IncubadoraWrapper(incub_data)
+                    documentos = sensores.diccionario(mi_icubadora)
                     if isinstance(documentos, list):
                         collec.insert_many(documentos)
                     else:
