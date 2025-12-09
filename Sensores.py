@@ -37,24 +37,25 @@ class Sensor(Lista):
             "GAS": "PPM",
             "HUM": "%",
             "TEMP": "°C",
-            "AGU": "PPM",
-            "SON": "cm",
-            "LUZ": "lx"
+            "AGU": "--",
+            "SON": "--",
+            "LUZ": "--"
         }
         return unidades.get(tipo, "Unknown")
     
-    def diccionario(self,incub):
+    def diccionario(self, incub):
         if self.eslista:
-            return [sensor.diccionario() for sensor in self.list]
+        # Pass 'incub' down to each child sensor
+         return [sensor.diccionario(incub) for sensor in self.list]
         else:
-            return {
-                "Date_Regis": datetime.now(),
-                "Sensor_type": self.tipo,
-                "numero": self.numero,
-                "value": self.valor,
-                "unit": self.unit,
-                "icubadora": {"id": ObjectId(incub.id), "name": incub.name}
-            }
+         return {
+            "Date_Regis": datetime.now(),
+            "Sensor_type": self.tipo,
+            "numero": self.numero,
+            "value": self.valor,
+            "unit": self.unit,
+            "incubadora": {"id": ObjectId(incub.id), "name": incub.name}
+        }
     
     def leer_datos(self, linea):
         pattern = r"([A-Z]+)(\d+):(\d+)"

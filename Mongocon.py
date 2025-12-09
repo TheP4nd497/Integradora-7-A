@@ -86,7 +86,7 @@ class Conexxion():
                 client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
                 database = client.get_database(MONGO_DB_NAME)
                 collec = database.get_collection(MONGO_COLLECTION_NAME)
-                results = list(db['Incubadoras'].aggregate(pipeline))
+                results = list(database['Incubadoras'].aggregate(pipeline))
                 if results:
                     incub_data = results[0]  # Get the first (and only) match
                     
