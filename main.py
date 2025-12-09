@@ -43,9 +43,9 @@ try:
     users_collection = db["User"]
     incubadoras_collection = db["Incubadoras"]
     sensors_collection = db["Sensors"]
-    print("✅ Conectado a MongoDB")
+    print("✅Conectado a MongoDB")
 except Exception as e:
-    print(f"❌ Error al conectar con MongoDB: {e}")
+    print(f"Error al conectar con MongoDB: {e}")
     raise
 
 security = HTTPBearer()
@@ -338,7 +338,7 @@ async def obtener_todos_sensores(
             "exito": True,
             "total": len(sensores),
             "sensores": sensores,
-            "nota": "⚠️ Este endpoint muestra TODOS los sensores sin filtro. Solo para debugging."
+            "nota": "Este endpoint muestra TODOS los sensores sin filtro. Solo para debugging."
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -348,9 +348,7 @@ async def test_busqueda_sensores(
     incubadora_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """
-    [DEBUG] Prueba diferentes filtros para encontrar sensores
-    """
+    
     try:
         resultados = {}
         
