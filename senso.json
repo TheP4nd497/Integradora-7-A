@@ -6,7 +6,13 @@
         "Sensor_type": "GAS",
         "numero": "01",
         "value": 346,
-        "unit": "PPM"
+        "unit": "PPM",
+        "incubadora": {
+    "id": {
+      "$oid": "69367bc04d39ad58c9bfdc25"
+    },
+    "name": "PrimeraIncubadora"
+  }
     },
     {
         "Date_Regis": {
@@ -15,7 +21,13 @@
         "Sensor_type": "HUM",
         "numero": "01",
         "value": 47,
-        "unit": "%"
+        "unit": "%",
+        "incubadora": {
+    "id": {
+      "$oid": "69367bc04d39ad58c9bfdc25"
+    },
+    "name": "PrimeraIncubadora"
+  }
     },
     {
         "Date_Regis": {
@@ -24,7 +36,13 @@
         "Sensor_type": "TEMP",
         "numero": "01",
         "value": 23,
-        "unit": "\u00b0C"
+        "unit": "\u00b0C",
+        "incubadora": {
+    "id": {
+      "$oid": "69367bc04d39ad58c9bfdc25"
+    },
+    "name": "PrimeraIncubadora"
+  }
     },
     {
         "Date_Regis": {
@@ -33,7 +51,13 @@
         "Sensor_type": "AGU",
         "numero": "01",
         "value": 110,
-        "unit": "PPM"
+        "unit": "PPM",
+        "incubadora": {
+    "id": {
+      "$oid": "69367bc04d39ad58c9bfdc25"
+    },
+    "name": "PrimeraIncubadora"
+  }
     },
     {
         "Date_Regis": {
@@ -42,6 +66,12 @@
         "Sensor_type": "SON",
         "numero": "01",
         "value": 1,
-        "unit": "cm"
+        "unit": "cm",
+        "incubadora": {
+    "id": {
+      "$oid": "69367bc04d39ad58c9bfdc25"
+    },
+    "name": "PrimeraIncubadora"
+  }
     }
 ]
