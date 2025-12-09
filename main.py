@@ -1,38 +1,35 @@
-"""FastAPI REST API para sistema de monitoreo de sensores
-Raspberry Pi - Arduino - MongoDB"""
-
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Depends, status, Query
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient, DESCENDING
 from datetime import datetime, timedelta
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
-from bson import Decimal128
+from bson import ObjectId, Decimal128
 import os
 import hashlib
+import jwt
 from dotenv import load_dotenv
+from functools import wraps
 
-# Cargar variables de entorno
 load_dotenv()
 
-# --- CONFIGURACIÓN ---
+# ==================== CONFIGURACIÓN ====================
 MONGO_CONNECTION_STRING = os.getenv("MONGO_CONNECTION_STRING")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "Incubadora")
-MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME", "Sensors")
-MONGO_USERS_COLLECTION = os.getenv("MONGO_USERS_COLLECTION", "User")
+JWT_SECRET = os.getenv("JWT_SECRET", "secreto")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRATION_HOURS = int(os.getenv("JWT_EXPIRATION_HOURS", 24))
 
-# Inicializar FastAPI
 app = FastAPI(
-    title="Sistema de Monitoreo de Sensores",
-    description="API para consultar datos de sensores Arduino",
-    version="1.0.0"
+    title="Sistema de Gestión de Incubadoras",
+    description="API con control de acceso basado en roles (Admin/Operador)",
+    version="2.0.0"
 )
 
-# Configurar CORS para permitir peticiones desde iOS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,383 +40,469 @@ try:
     client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000)
     client.server_info()
     db = client[MONGO_DB_NAME]
-    collection = db[MONGO_COLLECTION_NAME]
-    users_collection = db[MONGO_USERS_COLLECTION]
-    print("Conectado a MongoDB correctamente")
+    users_collection = db["User"]
+    incubadoras_collection = db["Incubadoras"]
+    sensors_collection = db["Sensors"]
+    print("Conectado a MongoDB")
 except Exception as e:
     print(f"Error al conectar con MongoDB: {e}")
     raise
 
-# --- MODELOS DE DATOS ---
-class UserRegistro(BaseModel):
-    Name: str = Field(..., min_length=2, max_length=100)
-    LastName: str = Field(..., min_length=2, max_length=100)
-    Mail: EmailStr
-    Contraseña: str = Field(..., min_length=6)
-    PhoneNumber: Optional[str] = Field(None, pattern=r'^\+?[0-9]{10,15}$')
+security = HTTPBearer()
+
+# ==================== MODELOS PYDANTIC ====================
+class UserCreate(BaseModel):
+    nombre: str = Field(..., min_length=2, max_length=100)
+    apellido: str = Field(..., min_length=2, max_length=100)
+    correo: EmailStr
+    contraseña: str = Field(..., min_length=6)
+    telefono: Optional[str] = Field(None, pattern=r'^\+?[0-9]{10,15}$')
+    rol: str = Field(default="operador", pattern="^(admin|operador)$")
 
 class UserLogin(BaseModel):
-    Mail: EmailStr
-    Contraseña: str
+    correo: EmailStr
+    contraseña: str
 
-class SensorReading(BaseModel):
-    GAS: Optional[int] = None
-    HUM: Optional[int] = None
-    TEMP: Optional[int] = None
-    AGU: Optional[int] = None
-    SON: Optional[int] = None
-    LUZ: Optional[int] = None
-    Date_Regis: datetime
+class IncubadoraCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=1)
+    userId: str
 
-class SensorStats(BaseModel):
-    promedio: float
-    minimo: float
-    maximo: float
-    total_lecturas: int
+class IncubadoraUpdate(BaseModel):
+    name: Optional[str] = None
+    userId: Optional[str] = None
 
-# --- FUNCIONES AUXILIARES ---
+class SensorAssign(BaseModel):
+    incubadoraId: str
+
+# ==================== FUNCIONES AUXILIARES ====================
 def hash_password(password: str) -> str:
-    """Hashea la contraseña usando SHA-256"""
     return hashlib.sha256(password.encode()).hexdigest()
 
+def create_token(user_id: str, rol: str) -> str:
+    payload = {
+        "user_id": user_id,
+        "rol": rol,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def decode_token(token: str) -> dict:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
 def convertir_decimal128(valor):
-    """Convierte Decimal128 de MongoDB a float"""
     if isinstance(valor, Decimal128):
         return float(valor.to_decimal())
     return valor
 
 def limpiar_documento(doc):
-    """Limpia un documento de MongoDB convirtiendo Decimal128 y ObjectId"""
     if not doc:
         return None
-    
-    # Convertir _id a string
     if "_id" in doc:
         doc["_id"] = str(doc["_id"])
-    
-    # Convertir value si es Decimal128
     if "value" in doc:
         doc["value"] = convertir_decimal128(doc["value"])
-    
+    if "userId" in doc and isinstance(doc["userId"], ObjectId):
+        doc["userId"] = str(doc["userId"])
     return doc
 
-# --- ENDPOINTS DE AUTENTICACIÓN ---
-@app.post("/User/Registro")
-async def registrar_usuario(usuario: UserRegistro):
-    """Registra un nuevo usuario en la base de datos"""
+# ==================== DEPENDENCIAS DE AUTORIZACIÓN ====================
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    payload = decode_token(token)
+    
+    user = users_collection.find_one({"_id": ObjectId(payload["user_id"])})
+    if not user:
+        raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    
+    return {
+        "id": str(user["_id"]),
+        "nombre": user.get("nombre"),
+        "apellido": user.get("apellido"),
+        "correo": user.get("correo"),
+        "rol": user.get("rol", "operador")
+    }
+
+def require_admin(current_user: dict = Depends(get_current_user)):
+    if current_user["rol"] != "admin":
+        raise HTTPException(
+            status_code=403, 
+            detail="Acceso denegado: Se requiere rol de administrador"
+        )
+    return current_user
+
+# ==================== ENDPOINTS DE AUTENTICACIÓN ====================
+@app.post("/auth/registro", tags=["Autenticación"])
+async def registrar_usuario(usuario: UserCreate):
+    """Registra un nuevo usuario (solo admin puede crear otros admins)"""
     try:
-        # Verificar si el email ya existe
-        usuario_existente = users_collection.find_one({"Mail": usuario.Mail})
-        if usuario_existente:
-            raise HTTPException(status_code=400, detail="El email ya está registrado")
+        if users_collection.find_one({"correo": usuario.correo}):
+            raise HTTPException(status_code=400, detail="El correo ya está registrado")
         
-        # Crear documento del usuario
         nuevo_usuario = {
-            "Name": usuario.Name,
-            "LastName": usuario.LastName,
-            "Mail": usuario.Mail,
-            "Contraseña": hash_password(usuario.Contraseña),
-            "PhoneNumber": usuario.PhoneNumber
+            "nombre": usuario.nombre,
+            "apellido": usuario.apellido,
+            "correo": usuario.correo,
+            "contraseña": hash_password(usuario.contraseña),
+            "telefono": usuario.telefono,
+            "rol": usuario.rol,
+            "Date_Regis": datetime.utcnow()
         }
         
-        # Insertar en MongoDB
         resultado = users_collection.insert_one(nuevo_usuario)
         
         return {
             "exito": True,
             "mensaje": "Usuario registrado exitosamente",
             "user_id": str(resultado.inserted_id),
-            "Mail": usuario.Mail
+            "rol": usuario.rol
         }
-        
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-@app.post("/User/IniciarSesion")
+@app.post("/auth/login", tags=["Autenticación"])
 async def iniciar_sesion(credenciales: UserLogin):
-    """Inicia sesión con email y contraseña"""
+    """Inicia sesión y retorna un token JWT"""
     try:
-        # Buscar usuario por email
-        usuario = users_collection.find_one({"Mail": credenciales.Mail})
+        usuario = users_collection.find_one({"correo": credenciales.correo})
         
         if not usuario:
             raise HTTPException(status_code=401, detail="Credenciales inválidas")
         
-        # Verificar contraseña
-        password_hash = hash_password(credenciales.Contraseña)
-        if usuario.get("Contraseña") != password_hash:
+        password_hash = hash_password(credenciales.contraseña)
+        if usuario.get("contraseña") != password_hash:
             raise HTTPException(status_code=401, detail="Credenciales inválidas")
+        
+        token = create_token(str(usuario["_id"]), usuario.get("rol", "operador"))
         
         return {
             "exito": True,
-            "mensaje": "Inicio de sesión exitoso",
+            "token": token,
             "usuario": {
                 "id": str(usuario["_id"]),
-                "Name": usuario.get("Name"),
-                "LastName": usuario.get("LastName"),
-                "Mail": usuario.get("Mail"),
-                "PhoneNumber": usuario.get("PhoneNumber")
+                "nombre": usuario.get("nombre"),
+                "apellido": usuario.get("apellido"),
+                "correo": usuario.get("correo"),
+                "rol": usuario.get("rol", "operador")
             }
         }
-        
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al iniciar sesión: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-# --- ENDPOINTS DE SENSORES ---
-@app.get("/")
-async def root():
-    """pa ver si la api jala"""
-    return {
-        "mensaje": "API de Sensores - Sistema de Monitoreo",
-        "version": "1.0.0",
-        "estado": "activo"
-    }
-
-@app.get("/health")
-async def health_check():
-    """pa ver si la api y el mongo jalan"""
+# ==================== ENDPOINTS DE USUARIOS ====================
+@app.get("/usuarios", tags=["Usuarios"])
+async def listar_usuarios(current_user: dict = Depends(require_admin)):
+    """Lista todos los usuarios (solo admin)"""
     try:
-        client.server_info()
-        total_docs = collection.count_documents({})
-        return {
-            "estado": "saludable",
-            "mongodb": "conectado",
-            "total_registros": total_docs,
-            "Date_Regis": datetime.now()
-        }
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Error de conexión: {str(e)}")
-
-@app.get("/lecturas/ultima")
-async def obtener_ultima_lectura():
-    """Obtiene la última lectura de CADA tipo de sensor"""
-    try:
-        sensores = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
-        lecturas_por_sensor = {}
+        usuarios = list(users_collection.find())
+        for user in usuarios:
+            user["_id"] = str(user["_id"])
+            user.pop("contraseña", None)
         
-        for sensor in sensores:
-            # Buscar la última lectura de este sensor específico
-            lectura = collection.find_one(
-                {"Sensor_type": sensor},
-                sort=[("Date_Regis", DESCENDING)]
-            )
-            
-            if lectura:
-                lecturas_por_sensor[sensor] = {
-                    "_id": str(lectura.get("_id")),
-                    "value": convertir_decimal128(lectura.get("value")),
-                    "unit": lectura.get("unit"),
-                    "Sensor_type": lectura.get("Sensor_type"),
-                    "Date_Regis": lectura.get("Date_Regis")
-                }
-        
-        if not lecturas_por_sensor:
-            return {
-                "exito": False, 
-                "mensaje": "No hay lecturas registradas"
-            }
-        
-        return {
-            "exito": True,
-            "total_sensores": len(lecturas_por_sensor),
-            "lecturas": lecturas_por_sensor
-        }
-
+        return {"exito": True, "total": len(usuarios), "usuarios": usuarios}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/lecturas/recientes")
-async def obtener_lecturas_recientes(
-    limite: int = Query(default=10, ge=1, le=100, description="Número de lecturas a obtener")
-):
-    """Obtiene las últimas N lecturas"""
+@app.get("/usuarios/me", tags=["Usuarios"])
+async def obtener_perfil(current_user: dict = Depends(get_current_user)):
+    """Obtiene el perfil del usuario actual"""
+    return {"exito": True, "usuario": current_user}
+
+@app.delete("/usuarios/{user_id}", tags=["Usuarios"])
+async def eliminar_usuario(user_id: str, current_user: dict = Depends(require_admin)):
+    """Elimina un usuario (solo admin)"""
     try:
-        lecturas = list(collection.find().sort("Date_Regis", DESCENDING).limit(limite))
+        resultado = users_collection.delete_one({"_id": ObjectId(user_id)})
+        if resultado.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
-        # Limpiar cada lectura
-        for lectura in lecturas:
-            limpiar_documento(lectura)
+        return {"exito": True, "mensaje": "Usuario eliminado"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINTS DE INCUBADORAS ====================
+@app.post("/incubadoras", tags=["Incubadoras"])
+async def crear_incubadora(
+    incubadora: IncubadoraCreate,
+    current_user: dict = Depends(require_admin)
+):
+    """Crea una nueva incubadora (solo admin)"""
+    try:
+        if incubadoras_collection.find_one({"code": incubadora.code}):
+            raise HTTPException(status_code=400, detail="El código ya existe")
         
+        nueva = {
+            "name": incubadora.name,
+            "code": incubadora.code,
+            "userId": ObjectId(incubadora.userId),
+            "Date_Regis": datetime.utcnow()
+        }
+        
+        resultado = incubadoras_collection.insert_one(nueva)
         return {
             "exito": True,
-            "total": len(lecturas),
-            "datos": lecturas
+            "incubadora_id": str(resultado.inserted_id),
+            "mensaje": "Incubadora creada"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener lecturas: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/lecturas/rango")
-async def obtener_lecturas_por_rango(
-    horas: int = Query(default=24, ge=1, description="Últimas N horas")
-):
-    """Obtiene lecturas de las últimas N horas"""
+@app.get("/incubadoras", tags=["Incubadoras"])
+async def listar_incubadoras(current_user: dict = Depends(get_current_user)):
+    """
+    Lista incubadoras:
+    - Admin: ve todas
+    - Operador: solo las asignadas
+    """
     try:
-        tiempo_inicio = datetime.now() - timedelta(hours=horas)
+        if current_user["rol"] == "admin":
+            incubadoras = list(incubadoras_collection.find())
+        else:
+            incubadoras = list(incubadoras_collection.find({
+                "userId": ObjectId(current_user["id"])
+            }))
         
-        lecturas = list(collection.find(
-            {"Date_Regis": {"$gte": tiempo_inicio}}
-        ).sort("Date_Regis", DESCENDING))
+        for inc in incubadoras:
+            limpiar_documento(inc)
         
-        for lectura in lecturas:
-            limpiar_documento(lectura)
-        
-        return {
-            "exito": True,
-            "periodo": f"últimas {horas} horas",
-            "desde": tiempo_inicio,
-            "hasta": datetime.now(),
-            "total": len(lecturas),
-            "datos": lecturas
-        }
+        return {"exito": True, "total": len(incubadoras), "incubadoras": incubadoras}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al obtener lecturas: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/sensor/{tipo_sensor}")
-async def obtener_datos_sensor_especifico(
+@app.put("/incubadoras/{incubadora_id}", tags=["Incubadoras"])
+async def actualizar_incubadora(
+    incubadora_id: str,
+    datos: IncubadoraUpdate,
+    current_user: dict = Depends(require_admin)
+):
+    """Actualiza una incubadora (solo admin)"""
+    try:
+        update_data = {k: v for k, v in datos.dict().items() if v is not None}
+        if "userId" in update_data:
+            update_data["userId"] = ObjectId(update_data["userId"])
+        
+        resultado = incubadoras_collection.update_one(
+            {"_id": ObjectId(incubadora_id)},
+            {"$set": update_data}
+        )
+        
+        if resultado.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Incubadora no encontrada")
+        
+        return {"exito": True, "mensaje": "Incubadora actualizada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/incubadoras/{incubadora_id}", tags=["Incubadoras"])
+async def eliminar_incubadora(
+    incubadora_id: str,
+    current_user: dict = Depends(require_admin)
+):
+    """Elimina una incubadora (solo admin)"""
+    try:
+        resultado = incubadoras_collection.delete_one({"_id": ObjectId(incubadora_id)})
+        if resultado.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Incubadora no encontrada")
+        
+        return {"exito": True, "mensaje": "Incubadora eliminada"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINTS DE SENSORES ====================
+@app.get("/sensores/incubadora/{incubadora_id}", tags=["Sensores"])
+async def obtener_sensores_incubadora(
+    incubadora_id: str,
+    limite: int = Query(default=50, ge=1, le=200, description="Número de lecturas"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Obtiene sensores de una incubadora:
+    - Admin: acceso total
+    - Operador: solo incubadoras asignadas
+    """
+    try:
+        incubadora = incubadoras_collection.find_one({"_id": ObjectId(incubadora_id)})
+        if not incubadora:
+            raise HTTPException(status_code=404, detail="Incubadora no encontrada")
+        
+        if current_user["rol"] != "admin":
+            if str(incubadora.get("userId")) != current_user["id"]:
+                raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+        # Buscar sensores con ambos formatos posibles
+        sensores = list(sensors_collection.find({
+            "$or": [
+                {"incubadora": ObjectId(incubadora_id)},
+                {"incubadora_id": incubadora_id},
+                {"incubadora_id": ObjectId(incubadora_id)}
+            ]
+        }).sort("Date_Regis", DESCENDING).limit(limite))
+        
+        for sensor in sensores:
+            limpiar_documento(sensor)
+            # Limpiar también incubadora_id si existe
+            if "incubadora_id" in sensor and isinstance(sensor.get("incubadora_id"), ObjectId):
+                sensor["incubadora_id"] = str(sensor.get("incubadora_id"))
+        
+        return {"exito": True, "total": len(sensores), "sensores": sensores}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sensores/historial/{incubadora_id}/{tipo_sensor}", tags=["Sensores"])
+async def historial_sensor(
+    incubadora_id: str,
     tipo_sensor: str,
-    limite: int = Query(default=20, ge=1, le=100)
+    limite: int = Query(default=5, ge=1, le=100, description="Número de registros"),
+    numero: Optional[str] = Query(default=None, description="Número específico del sensor (ej: 01, 02)"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
-    Obtiene datos de un sensor específico
-    Sensores disponibles: GAS, HUMEDAD, TEM, NIVEL_AGUA, SONIDO, LUZ
+    Obtiene el historial de un sensor específico
+    Tipos: GAS, HUM, TEMP, AGU, SON, LUZ
+    Opcionalmente filtra por número de sensor (ej: TEMP02)
     """
-    sensores_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
+    tipos_validos = ["GAS", "HUM", "TEMP", "AGU", "SON", "LUZ"]
     
-    if tipo_sensor not in sensores_validos:
+    if tipo_sensor not in tipos_validos:
         raise HTTPException(
-            status_code=400, 
-            detail=f"Sensor no válido. Use: {', '.join(sensores_validos)}"
+            status_code=400,
+            detail=f"Tipo de sensor inválido. Use: {', '.join(tipos_validos)}"
         )
     
     try:
-        # Buscar documentos que tengan el sensor_type específico
-        lecturas = list(collection.find(
-            {"Sensor_type": tipo_sensor}
-        ).sort("Date_Regis", DESCENDING).limit(limite))
+        incubadora = incubadoras_collection.find_one({"_id": ObjectId(incubadora_id)})
+        if not incubadora:
+            raise HTTPException(status_code=404, detail="Incubadora no encontrada")
         
-        # Extraer los datos del sensor
-        datos_sensor = []
-        for lectura in lecturas:
-            datos_sensor.append({
-                "_id": str(lectura.get("_id")),
-                "value": convertir_decimal128(lectura.get("value")),
-                "unit": lectura.get("unit"),
-                "Sensor_type": lectura.get("Sensor_type"),
-                "Date_Regis": lectura.get("Date_Regis")
-            })
+        if current_user["rol"] != "admin":
+            if str(incubadora.get("userId")) != current_user["id"]:
+                raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+        # Construir filtro base - probar ambos formatos de incubadora
+        filtro = {
+            "$or": [
+                {"incubadora": ObjectId(incubadora_id)},
+                {"incubadora_id": incubadora_id},
+                {"incubadora_id": ObjectId(incubadora_id)}
+            ],
+            "Sensor_type": tipo_sensor
+        }
+        
+        # Agregar filtro por número si se especifica
+        if numero:
+            filtro["numero"] = numero
+        
+        historial = list(sensors_collection.find(filtro).sort("Date_Regis", DESCENDING).limit(limite))
+        
+        for registro in historial:
+            limpiar_documento(registro)
+            # Limpiar también incubadora_id si existe
+            if "incubadora_id" in registro and isinstance(registro["incubadora_id"], ObjectId):
+                registro["incubadora_id"] = str(registro["incubadora_id"])
         
         return {
             "exito": True,
-            "sensor": tipo_sensor,
-            "total": len(datos_sensor),
-            "datos": datos_sensor
+            "incubadora_id": incubadora_id,
+            "tipo_sensor": tipo_sensor,
+            "numero_sensor": numero if numero else "todos",
+            "total": len(historial),
+            "historial": historial
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/alertas")
-async def verificar_alertas():
-    """
-    Verifica si hay condiciones de alerta en las últimas lecturas de cada sensor
-    """
-    UMBRALES = {
-        "GAS": {"max": 400, "mensaje": "Nivel de gas peligroso"},
-        "TEM": {"max": 35, "min": 15, "mensaje": "Temperatura fuera de rango"},
-        "HUM": {"max": 80, "min": 30, "mensaje": "Humedad fuera de rango"},
-        "AGU": {"max": 800, "mensaje": "Nivel de agua alto"},
-        "LUZ": {"min": 100, "mensaje": "Nivel de luz bajo"}
-    }
-    
+@app.get("/sensores/ultima-lectura/{incubadora_id}", tags=["Sensores"])
+async def ultima_lectura_incubadora(
+    incubadora_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Obtiene la última lectura de cada sensor de una incubadora (agrupado por tipo y número)"""
     try:
-        alertas = []
+        incubadora = incubadoras_collection.find_one({"_id": ObjectId(incubadora_id)})
+        if not incubadora:
+            raise HTTPException(status_code=404, detail="Incubadora no encontrada")
         
-        # Verificar cada tipo de sensor
-        for sensor_type, limites in UMBRALES.items():
-            # Obtener la última lectura de este sensor
-            lectura = collection.find(
-                {"Sensor_type": sensor_type}
-            ).sort("Date_Regis", DESCENDING).limit(1)
+        if current_user["rol"] != "admin":
+            if str(incubadora.get("userId")) != current_user["id"]:
+                raise HTTPException(status_code=403, detail="Acceso denegado")
+        
+        # Obtener todos los sensores de la incubadora - probar ambos formatos
+        todos_sensores = list(sensors_collection.find({
+            "$or": [
+                {"incubadora": ObjectId(incubadora_id)},
+                {"incubadora_id": incubadora_id},
+                {"incubadora_id": ObjectId(incubadora_id)}
+            ]
+        }).sort("Date_Regis", DESCENDING))
+        
+        # Agrupar por tipo y número de sensor
+        lecturas_agrupadas = {}
+        sensores_vistos = set()  # Para trackear combinaciones únicas de tipo+numero
+        
+        for sensor in todos_sensores:
+            tipo = sensor.get("Sensor_type")
+            numero = sensor.get("numero", "01")  # Default "01" si no existe
+            clave_unica = f"{tipo}_{numero}"
             
-            lecturas_list = list(lectura)
-            if lecturas_list and len(lecturas_list) > 0:
-                lectura_doc = lecturas_list[0]
-                if "value" in lectura_doc:
-                    valor = convertir_decimal128(lectura_doc.get("value"))
-                    
-                    # CORRECCIÓN: Asegurar que valor sea numérico
-                    try:
-                        valor = float(valor)
-                    except (ValueError, TypeError):
-                        pass
-                        continue
-                    
-                    if "max" in limites and valor > limites["max"]:
-                        alertas.append({
-                            "sensor": sensor_type,
-                            "tipo": "CRÍTICO",
-                            "valor_actual": valor,
-                            "umbral": limites["max"],
-                            "mensaje": limites["mensaje"],
-                            "Date_Regis": lectura_doc.get("Date_Regis")
-                        })
-                    elif "min" in limites and valor < limites["min"]:
-                        alertas.append({
-                            "sensor": sensor_type,
-                            "tipo": "ADVERTENCIA",
-                            "valor_actual": valor,
-                            "umbral": limites["min"],
-                            "mensaje": limites["mensaje"],
-                            "Date_Regis": lectura_doc.get("Date_Regis")
-                        })
+            # Solo agregar si no hemos visto esta combinación tipo+numero
+            if clave_unica not in sensores_vistos:
+                sensores_vistos.add(clave_unica)
+                
+                # Crear estructura anidada si no existe
+                if tipo not in lecturas_agrupadas:
+                    lecturas_agrupadas[tipo] = {}
+                
+                # Limpiar el documento
+                sensor_limpio = limpiar_documento(sensor)
+                if "incubadora_id" in sensor_limpio and isinstance(sensor.get("incubadora_id"), ObjectId):
+                    sensor_limpio["incubadora_id"] = str(sensor.get("incubadora_id"))
+                
+                # Agregar la lectura más reciente para este tipo+numero
+                lecturas_agrupadas[tipo][numero] = sensor_limpio
         
         return {
             "exito": True,
-            "hay_alertas": len(alertas) > 0,
-            "total_alertas": len(alertas),
-            "alertas": alertas
+            "total_sensores": len(sensores_vistos),
+            "lecturas": lecturas_agrupadas
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== HEALTH CHECK ====================
+@app.get("/", tags=["Sistema"])
+async def root():
+    return {
+        "mensaje": "API de Incubadoras v2.0",
+        "estado": "activo",
+        "roles": ["admin", "operador"]
+    }
+
+@app.get("/health", tags=["Sistema"])
+async def health_check():
+    try:
+        client.server_info()
+        return {
+            "estado": "saludable",
+            "mongodb": "conectado",
+            "timestamp": datetime.utcnow()
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-# --- MANEJO DE ERRORES ---
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    return JSONResponse(
-        status_code=404,
-        content={
-            "exito": False,
-            "error": "Recurso no encontrado",
-            "detalle": str(exc.detail) if hasattr(exc, 'detail') else "Not found"
-        }
-    )
-
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    return JSONResponse(
-        status_code=500,
-        content={
-            "exito": False,
-            "error": "Error interno del servidor",
-            "detalle": str(exc)
-        }
-    )
-
-# --- STARTUP/SHUTDOWN ---
-@app.on_event("startup")
-async def startup_event():
-    print("🚀 API iniciada correctamente")
-    print(f"Base de datos: {MONGO_DB_NAME}")
-    print(f"Colección: {MONGO_COLLECTION_NAME}")
-    print(f"Usuarios Colección: {MONGO_USERS_COLLECTION}")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    client.close()
-    print("Conexión a MongoDB cerrada")
+        raise HTTPException(status_code=503, detail=f"Error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
