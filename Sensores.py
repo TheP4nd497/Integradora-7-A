@@ -37,9 +37,9 @@ class Sensor(Lista):
             "GAS": "PPM",
             "HUM": "%",
             "TEMP": "°C",
-            "AGU": "PPM",
-            "SON": "cm",
-            "LUZ": "lx"
+            "AGU": "--",
+            "SON": "--",
+            "LUZ": "--"
         }
         return unidades.get(tipo, "Unknown")
     
