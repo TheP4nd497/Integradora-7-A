@@ -1,4 +1,5 @@
 
+from bson import ObjectId
 from Sensores import Sensor
 import serial
 import json
@@ -16,8 +17,26 @@ BAUD_RATE = 9600              # Must match your Arduino's Serial.begin() rate
 MONGO_CONNECTION_STRING = "mongodb+srv://jismaelzk09_db_user:3P4Vo0I0LbRWh4L2@utt.ljiugys.mongodb.net/?appName=UTT"
 MONGO_DB_NAME = "Incubadora"
 MONGO_COLLECTION_NAME = "Sensors"
+pipeline = [
+    {
+        "$match": {
+            "_id": ObjectId('69367bc04d39ad58c9bfdc25') # Creates the ObjectId
+        }
+    },
+    {
+        "$project": {
+            "code": 0,
+            "userId": 0,
+            "Date_Regis": 0
+        }
+    }
+]
 # --- End of Configuration 
 
+class IncubadoraWrapper:
+   def __init__(self, dictionary):
+       self.id = dictionary['_id']
+       self.name = dictionary.get('name', 'Unknown')
 
 class Conexxion():
     
@@ -67,9 +86,17 @@ class Conexxion():
                 client = MongoClient(MONGO_CONNECTION_STRING, serverSelectionTimeoutMS=5000, tlsCAFile=certifi.where())
                 database = client.get_database(MONGO_DB_NAME)
                 collec = database.get_collection(MONGO_COLLECTION_NAME)
-                documentos = sensores.diccionario()
-                collec.insert_many(documentos)
-                client.close()
+                results = list(db['Incubadoras'].aggregate(pipeline))
+                if results:
+                    incub_data = results[0]  # Get the first (and only) match
+                    
+                  
+                    documentos = sensores.diccionario(IncubadoraWrapper(incub_data))
+                    if isinstance(documentos, list):
+                        collec.insert_many(documentos)
+                    else:
+                        collec.insert_one(documentos)
+                    client.close()
 
             except Exception as e:
             # Just print the error, do NOT raise it.

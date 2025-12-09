@@ -1,5 +1,8 @@
 
 import re
+from bson.objectid import ObjectId
+
+
 from lista import Lista
 import json
 from datetime import datetime
@@ -40,7 +43,7 @@ class Sensor(Lista):
         }
         return unidades.get(tipo, "Unknown")
     
-    def diccionario(self):
+    def diccionario(self,incub):
         if self.eslista:
             return [sensor.diccionario() for sensor in self.list]
         else:
@@ -49,7 +52,8 @@ class Sensor(Lista):
                 "Sensor_type": self.tipo,
                 "numero": self.numero,
                 "value": self.valor,
-                "unit": self.unit
+                "unit": self.unit,
+                "icubadora": {"id": ObjectId(incub.id), "name": incub.name}
             }
     
     def leer_datos(self, linea):
