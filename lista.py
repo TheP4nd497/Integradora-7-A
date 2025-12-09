@@ -36,8 +36,7 @@ class Lista:
     def diccionario(self):
         return []
 
-    def jsontransform(self, filename="data.json"):
-        route = getcwd()
-        with open(path.join(route, filename), "w") as archivo:
-           archivo.write(json_util.dumps(self.diccionario(), indent=4))
+    def jsontransform(self, nombre_archivo, incub):
+        with open(nombre_archivo, 'w') as archivo:
+            archivo.write(json_util.dumps(self.diccionario(incub), indent=4))
     

@@ -34,8 +34,8 @@ pipeline = [
 # --- End of Configuration 
 
 class IncubadoraWrapper:
-   def __init__(self, dictionary):
-       self.id = dictionary['_id']
+   def __init__(self, dictionary={"_id": None, "name": "Unknown"}):
+       self.id = dictionary.get('_id', None)
        self.name = dictionary.get('name', 'Unknown')
 
 class Conexxion():
@@ -64,6 +64,7 @@ class Conexxion():
         if not self.is_running:
             return  # Stop the loop
         sensores = Sensor()
+        mi_incubadora = IncubadoraWrapper()
         # 2. DO THE WORK
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             while True:
@@ -74,9 +75,8 @@ class Conexxion():
                     print(f"Received line: {line}")
 
                     # 2. Parse the line into Sensor objects
-                    
                     sensores.leer_datos(line)
-                    sensores.jsontransform("senso.json")
+                    sensores.jsontransform("senso.json", mi_incubadora)
                     print(sensores)
                     break  # Exit after processing one line for this example
        
@@ -90,8 +90,8 @@ class Conexxion():
                 if results:
                     incub_data = results[0]  # Get the first (and only) match
                     
-                    mi_icubadora = IncubadoraWrapper(incub_data)
-                    documentos = sensores.diccionario(mi_icubadora)
+                    mi_incubadora = IncubadoraWrapper(incub_data)
+                    documentos = sensores.diccionario(mi_incubadora)
                     if isinstance(documentos, list):
                         collec.insert_many(documentos)
                     else:
