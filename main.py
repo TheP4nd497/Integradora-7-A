@@ -75,6 +75,25 @@ class IncubadoraUpdate(BaseModel):
 class SensorAssign(BaseModel):
     incubadoraId: str
 
+class SensorCreate(BaseModel):
+    incubadoraId: str
+    sensorType: str = Field(
+        ...,
+        pattern=r"^(GAS|TEMP|HUM|AGU|SON|LUZ)$",
+        description="Tipo de sensor permitido"
+    )
+    numero: str = Field(
+        ...,
+        pattern=r"^[0-9]{2}$",
+        description="Número del sensor (formato 01, 02, etc.)"
+    )
+    descripcion: Optional[str] = Field(
+        None,
+        max_length=200,
+        description="Descripción opcional del sensor"
+    )
+
+
 # ==================== FUNCIONES AUXILIARES ====================
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
@@ -397,6 +416,71 @@ async def test_busqueda_sensores(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/admin/sensores", tags=["Sensores - Admin"])
+async def crear_sensor(
+    sensor: SensorCreate,
+    current_user: dict = Depends(require_admin)
+):
+    """
+    Crea un nuevo sensor asociado a una incubadora (solo administradores).
+    El sensor quedará listo para recibir datos desde el hardware.
+    """
+    try:
+        # 1. Verificar existencia de la incubadora
+        incubadora = incubadoras_collection.find_one({"_id": ObjectId(sensor.incubadoraId)})
+        if not incubadora:
+            raise HTTPException(status_code=404, detail="La incubadora no existe")
+
+        # 2. Construir el código único del sensor
+        sensor_code = f"{sensor.sensorType}{sensor.numero}"
+
+        # 3. Validar que el sensor no esté duplicado dentro de la misma incubadora
+        sensor_existente = sensors_collection.find_one({
+            "incubadora.id": ObjectId(sensor.incubadoraId),
+            "Sensor_type": sensor.sensorType,
+            "numero": sensor.numero
+        })
+
+        if sensor_existente:
+            raise HTTPException(
+                status_code=400,
+                detail=f"El sensor {sensor_code} ya está registrado en esta incubadora"
+            )
+
+        # 4. Construcción del documento del nuevo sensor
+        nuevo_sensor = {
+            "incubadora": {
+                "id": ObjectId(sensor.incubadoraId),
+                "name": incubadora.get("name"),
+                "code": incubadora.get("code")
+            },
+            "Sensor_type": sensor.sensorType,
+            "numero": sensor.numero,
+            "sensorCode": sensor_code,
+            "descripcion": sensor.descripcion,
+            "activo": True,
+            "registrado_por": current_user["id"],
+            "Date_Regis": datetime.utcnow(),
+            "tipo_registro": "manual"
+        }
+
+        # 5. Inserción en la base de datos
+        resultado = sensors_collection.insert_one(nuevo_sensor)
+
+        return {
+            "exito": True,
+            "mensaje": f"Sensor {sensor_code} registrado exitosamente",
+            "sensor_id": str(resultado.inserted_id),
+            "sensor_code": sensor_code
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # ==================== ENDPOINTS DE SENSORES ====================
 @app.get("/sensores/incubadora/{incubadora_id}", tags=["Sensores"])
