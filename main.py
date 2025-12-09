@@ -43,9 +43,9 @@ try:
     users_collection = db["User"]
     incubadoras_collection = db["Incubadoras"]
     sensors_collection = db["Sensors"]
-    print("Conectado a MongoDB")
+    print("✅ Conectado a MongoDB")
 except Exception as e:
-    print(f"Error al conectar con MongoDB: {e}")
+    print(f"❌ Error al conectar con MongoDB: {e}")
     raise
 
 security = HTTPBearer()
@@ -318,6 +318,89 @@ async def eliminar_incubadora(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== ENDPOINTS DE SENSORES ====================
+
+@app.get("/sensores/todos", tags=["Sensores - Debug"])
+async def obtener_todos_sensores(
+    limite: int = Query(default=20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    [TEMPORAL - DEBUGGING] Obtiene todos los sensores sin filtro de incubadora
+    Útil para verificar qué datos existen en la colección
+    """
+    try:
+        sensores = list(sensors_collection.find().sort("Date_Regis", DESCENDING).limit(limite))
+        
+        for sensor in sensores:
+            limpiar_documento(sensor)
+        
+        return {
+            "exito": True,
+            "total": len(sensores),
+            "sensores": sensores,
+            "nota": "⚠️ Este endpoint muestra TODOS los sensores sin filtro. Solo para debugging."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sensores/test/{incubadora_id}", tags=["Sensores - Debug"])
+async def test_busqueda_sensores(
+    incubadora_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    [DEBUG] Prueba diferentes filtros para encontrar sensores
+    """
+    try:
+        resultados = {}
+        
+        # Prueba 1: incubadora.id como ObjectId
+        count1 = sensors_collection.count_documents({
+            "incubadora.id": ObjectId(incubadora_id)
+        })
+        resultados["filtro_incubadora.id_ObjectId"] = count1
+        
+        # Prueba 2: incubadora._id como ObjectId
+        count2 = sensors_collection.count_documents({
+            "incubadora._id": ObjectId(incubadora_id)
+        })
+        resultados["filtro_incubadora._id_ObjectId"] = count2
+        
+        # Prueba 3: incubadora_id como string
+        count3 = sensors_collection.count_documents({
+            "incubadora_id": incubadora_id
+        })
+        resultados["filtro_incubadora_id_string"] = count3
+        
+        # Prueba 4: incubadora_id como ObjectId
+        count4 = sensors_collection.count_documents({
+            "incubadora_id": ObjectId(incubadora_id)
+        })
+        resultados["filtro_incubadora_id_ObjectId"] = count4
+        
+        # Prueba 5: Total de sensores en la colección
+        total = sensors_collection.count_documents({})
+        resultados["total_sensores_en_coleccion"] = total
+        
+        # Obtener un ejemplo de sensor
+        ejemplo = sensors_collection.find_one()
+        if ejemplo:
+            ejemplo = limpiar_documento(ejemplo)
+            if "incubadora" in ejemplo and isinstance(ejemplo["incubadora"], dict):
+                if "id" in ejemplo["incubadora"]:
+                    ejemplo["incubadora"]["id"] = str(ejemplo["incubadora"]["id"])
+        
+        return {
+            "exito": True,
+            "incubadora_id_buscado": incubadora_id,
+            "resultados_de_busqueda": resultados,
+            "filtro_que_funciona": [k for k, v in resultados.items() if v > 0],
+            "ejemplo_de_sensor": ejemplo
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== ENDPOINTS DE SENSORES ====================
 @app.get("/sensores/incubadora/{incubadora_id}", tags=["Sensores"])
 async def obtener_sensores_incubadora(
     incubadora_id: str,
@@ -338,20 +421,16 @@ async def obtener_sensores_incubadora(
             if str(incubadora.get("userId")) != current_user["id"]:
                 raise HTTPException(status_code=403, detail="Acceso denegado")
         
-        # Buscar sensores con ambos formatos posibles
+        # Buscar por incubadora.id (tu estructura)
         sensores = list(sensors_collection.find({
-            "$or": [
-                {"incubadora": ObjectId(incubadora_id)},
-                {"incubadora_id": incubadora_id},
-                {"incubadora_id": ObjectId(incubadora_id)}
-            ]
+            "incubadora.id": ObjectId(incubadora_id)
         }).sort("Date_Regis", DESCENDING).limit(limite))
         
         for sensor in sensores:
             limpiar_documento(sensor)
-            # Limpiar también incubadora_id si existe
-            if "incubadora_id" in sensor and isinstance(sensor.get("incubadora_id"), ObjectId):
-                sensor["incubadora_id"] = str(sensor.get("incubadora_id"))
+            if "incubadora" in sensor and isinstance(sensor["incubadora"], dict):
+                if "id" in sensor["incubadora"]:
+                    sensor["incubadora"]["id"] = str(sensor["incubadora"]["id"])
         
         return {"exito": True, "total": len(sensores), "sensores": sensores}
     except HTTPException:
@@ -389,13 +468,9 @@ async def historial_sensor(
             if str(incubadora.get("userId")) != current_user["id"]:
                 raise HTTPException(status_code=403, detail="Acceso denegado")
         
-        # Construir filtro base - probar ambos formatos de incubadora
+        # Construir filtro - buscar por incubadora.id (tu estructura)
         filtro = {
-            "$or": [
-                {"incubadora": ObjectId(incubadora_id)},
-                {"incubadora_id": incubadora_id},
-                {"incubadora_id": ObjectId(incubadora_id)}
-            ],
+            "incubadora.id": ObjectId(incubadora_id),
             "Sensor_type": tipo_sensor
         }
         
@@ -407,9 +482,9 @@ async def historial_sensor(
         
         for registro in historial:
             limpiar_documento(registro)
-            # Limpiar también incubadora_id si existe
-            if "incubadora_id" in registro and isinstance(registro["incubadora_id"], ObjectId):
-                registro["incubadora_id"] = str(registro["incubadora_id"])
+            if "incubadora" in registro and isinstance(registro["incubadora"], dict):
+                if "id" in registro["incubadora"]:
+                    registro["incubadora"]["id"] = str(registro["incubadora"]["id"])
         
         return {
             "exito": True,
@@ -439,38 +514,31 @@ async def ultima_lectura_incubadora(
             if str(incubadora.get("userId")) != current_user["id"]:
                 raise HTTPException(status_code=403, detail="Acceso denegado")
         
-        # Obtener todos los sensores de la incubadora - probar ambos formatos
+        # Buscar por incubadora.id (tu estructura)
         todos_sensores = list(sensors_collection.find({
-            "$or": [
-                {"incubadora": ObjectId(incubadora_id)},
-                {"incubadora_id": incubadora_id},
-                {"incubadora_id": ObjectId(incubadora_id)}
-            ]
+            "incubadora.id": ObjectId(incubadora_id)
         }).sort("Date_Regis", DESCENDING))
         
         # Agrupar por tipo y número de sensor
         lecturas_agrupadas = {}
-        sensores_vistos = set()  # Para trackear combinaciones únicas de tipo+numero
+        sensores_vistos = set()
         
         for sensor in todos_sensores:
             tipo = sensor.get("Sensor_type")
-            numero = sensor.get("numero", "01")  # Default "01" si no existe
+            numero = sensor.get("numero", "01")
             clave_unica = f"{tipo}_{numero}"
             
-            # Solo agregar si no hemos visto esta combinación tipo+numero
             if clave_unica not in sensores_vistos:
                 sensores_vistos.add(clave_unica)
                 
-                # Crear estructura anidada si no existe
                 if tipo not in lecturas_agrupadas:
                     lecturas_agrupadas[tipo] = {}
                 
-                # Limpiar el documento
                 sensor_limpio = limpiar_documento(sensor)
-                if "incubadora_id" in sensor_limpio and isinstance(sensor.get("incubadora_id"), ObjectId):
-                    sensor_limpio["incubadora_id"] = str(sensor.get("incubadora_id"))
+                if "incubadora" in sensor_limpio and isinstance(sensor_limpio["incubadora"], dict):
+                    if "id" in sensor_limpio["incubadora"]:
+                        sensor_limpio["incubadora"]["id"] = str(sensor_limpio["incubadora"]["id"])
                 
-                # Agregar la lectura más reciente para este tipo+numero
                 lecturas_agrupadas[tipo][numero] = sensor_limpio
         
         return {
